@@ -26,6 +26,11 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
     try {
       const url = new URL(req.url, 'http://localhost');
       // Keep Render health checks from waking the free database continuously.
+      if(url.pathname==='/ping'){
+        if(!['GET','HEAD'].includes(req.method))return send(405,{error:'不支持的请求方式'});
+        res.writeHead(200,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});
+        return res.end(req.method==='HEAD'?undefined:'ok');
+      }
       if (url.pathname === '/healthz') return send(200, {ok:true});
       if (!url.pathname.startsWith('/api/')) {
         if (!['GET','HEAD'].includes(req.method)) return send(405,{error:'不支持的请求方式'});

@@ -1,19 +1,15 @@
 import http from 'node:http';
-import { DatabaseSync } from 'node:sqlite';
+import { openStore } from './database.js';
 import { randomBytes, createHash } from 'node:crypto';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const publicRoot = path.join(root, 'public');
 const hash = value => createHash('sha256').update(value).digest('hex');
-export function createApp(dataDir = process.env.DATA_DIR || path.join(root, 'data')) {
-  mkdirSync(dataDir, { recursive: true });
-  const db = new DatabaseSync(path.join(dataDir, 'class.db'));
-  db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
-    CREATE TABLE IF NOT EXISTS notes(id TEXT PRIMARY KEY, owner TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, date TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS likes(person TEXT NOT NULL, owner TEXT NOT NULL, PRIMARY KEY(person,owner));`);
+export async function createApp(dataDir = process.env.DATA_DIR || path.join(root, 'data'), injectedStore) {
+  const db = injectedStore || await openStore({directory:dataDir,databaseUrl:process.env.DATABASE_URL,render:!!process.env.RENDER});
   const rates = new Map();
   const server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -23,7 +19,8 @@ export function createApp(dataDir = process.env.DATA_DIR || path.join(root, 'dat
     const send = (status, body) => { res.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}); res.end(JSON.stringify(body)); };
     try {
       const url = new URL(req.url, 'http://localhost');
-      if (url.pathname === '/healthz') return send(200, {ok: db.prepare('SELECT 1 AS ok').get().ok === 1});
+      // Keep Render health checks from waking the free database continuously.
+      if (url.pathname === '/healthz') return send(200, {ok:true});
       if (!url.pathname.startsWith('/api/')) {
         if (!['GET','HEAD'].includes(req.method)) return send(405,{error:'不支持的请求方式'});
         const pathname = decodeURIComponent(url.pathname);
@@ -53,37 +50,38 @@ export function createApp(dataDir = process.env.DATA_DIR || path.join(root, 'dat
         let entry=rates.get(key); if(!entry || now-entry.start>60000){entry={start:now,count:0};rates.set(key,entry)}
         if(++entry.count>120) return send(429,{error:'操作太频繁，请稍后再试'});
       }
-      const listNotes = () => db.prepare('SELECT id, name, text, date, owner = ? AS mine FROM notes ORDER BY date DESC, id DESC LIMIT 200').all(owner).map(n=>({...n,mine:!!n.mine}));
-      const listLikes = () => Object.fromEntries(['p1','p2','p3'].map(person=>[person,{count:db.prepare('SELECT count(*) AS n FROM likes WHERE person=?').get(person).n,liked:!!db.prepare('SELECT 1 FROM likes WHERE person=? AND owner=?').get(person,owner)}]));
-      if (req.method === 'GET' && url.pathname === '/api/state') return send(200,{notes:listNotes(),likes:listLikes()});
+      const listNotes = () => db.notes(owner);
+      const listLikes = () => db.likes(owner);
+      if (req.method === 'GET' && url.pathname === '/api/state') {
+        const [notes,likes]=await Promise.all([listNotes(),listLikes()]);
+        return send(200,{notes,likes});
+      }
       if (req.method === 'POST' && url.pathname === '/api/notes') {
         const body=await readJson(req);
         if(typeof body.name!=='string'||typeof body.text!=='string'||!body.name.trim()||!body.text.trim()||body.name.length>16||body.text.length>200) return send(400,{error:'昵称限 1–16 字，留言限 1–200 字'});
-        const recent=db.prepare('SELECT date FROM notes WHERE owner=? ORDER BY date DESC LIMIT 1').get(owner);
-        if(recent && Date.now()-Date.parse(recent.date)<10000)return send(429,{error:'请间隔 10 秒再发留言'});
-        db.prepare('INSERT INTO notes VALUES(?,?,?,?,?)').run(randomBytes(16).toString('hex'),owner,body.name.trim(),body.text.trim(),new Date().toISOString());
-        return send(201,{notes:listNotes()});
+        const added=await db.add({id:randomBytes(16).toString('hex'),owner,name:body.name.trim(),text:body.text.trim(),date:new Date().toISOString()});
+        if(!added)return send(429,{error:'请间隔 10 秒再发留言'});
+        return send(201,{notes:await listNotes()});
       }
       const deletion=/^\/api\/notes\/([a-f0-9]{32})$/.exec(url.pathname);
       if(req.method==='DELETE'&&deletion){
-        const result=db.prepare('DELETE FROM notes WHERE id=? AND owner=?').run(deletion[1],owner);
-        if(!result.changes)return send(403,{error:'只能删除此浏览器发布的留言'});
-        return send(200,{notes:listNotes()});
+        const removed=await db.remove(deletion[1],owner);
+        if(!removed)return send(403,{error:'只能删除此浏览器发布的留言'});
+        return send(200,{notes:await listNotes()});
       }
       const like=/^\/api\/likes\/(p[123])$/.exec(url.pathname);
       if(req.method==='PUT'&&like){
         const body=await readJson(req); if(typeof body.liked!=='boolean')return send(400,{error:'点赞状态无效'});
-        if(body.liked)db.prepare('INSERT OR IGNORE INTO likes VALUES(?,?)').run(like[1],owner);
-        else db.prepare('DELETE FROM likes WHERE person=? AND owner=?').run(like[1],owner);
-        return send(200,{likes:listLikes()});
+        await db.like(like[1],owner,body.liked);
+        return send(200,{likes:await listLikes()});
       }
       return send(404,{error:'接口不存在'});
     } catch(error) {
       if(error.status)return send(error.status,{error:error.message});
-      console.error(error); if(!res.headersSent)send(500,{error:'服务器暂时繁忙，请稍后重试'});else res.end();
+      console.error('请求失败：',error.code || error.name); if(!res.headersSent)send(503,{error:'数据库暂时无法连接，请稍后重试'});else res.end();
     }
   });
-  server.on('close',()=>db.close());
+  server.on('close',()=>{db.close().catch(()=>console.error('关闭数据库时发生错误'))});
   return server;
 }
 async function readJson(req){
@@ -93,7 +91,7 @@ async function readJson(req){
   try{const body=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!body||Array.isArray(body)||typeof body!=='object')throw Error();return body}catch{throw Object.assign(new Error('请求格式无效'),{status:400})}
 }
 if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  if(process.env.RENDER && !process.env.DATA_DIR)throw new Error('Render 部署必须配置 DATA_DIR 并挂载持久磁盘，详见 README.md');
-  const server=createApp();server.listen(Number(process.env.PORT)||3000,'0.0.0.0',()=>console.log(`班级网站已启动：http://localhost:${server.address().port}`));
+
+  const server=await createApp();server.listen(Number(process.env.PORT)||3000,'0.0.0.0',()=>console.log(`班级网站已启动：http://localhost:${server.address().port}`));
   for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>server.close(()=>process.exit(0)));
 }

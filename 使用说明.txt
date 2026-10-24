@@ -1,9 +1,7 @@
-网站已升级为 Render 后端版。
+25计算机1 · Render 免费部署版
 
-本地启动：双击“启动网站.bat”，然后在浏览器访问 http://localhost:3000。
-需要先安装 Node.js 24，不能通过双击 HTML 使用共享留言。
+共享留言使用 Neon 免费 PostgreSQL，Render 使用 Free Web Service，不需要持久磁盘。
+请先阅读 README.md 创建免费数据库，并在 Render 填写 DATABASE_URL，再部署。
 
-Render 部署：请阅读 README.md。仓库已附 render.yaml，可用 Blueprint 创建。
-注意：这套配置使用付费 Web Service + 持久磁盘。免费实例不支持该磁盘。
-
-留言与点赞全班共享；添加的照片仍只在当前页面临时预览。
+本地：安装 Node.js 24，首次运行 npm ci，然后双击“启动网站.bat”。
+当前没有远程数据库配置，也没有实际创建线上服务；代码已经支持免费部署。

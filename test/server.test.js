@@ -8,7 +8,7 @@ import {createApp} from '../server.js';
 test('cross-device sharing, ownership, validation, static isolation and restart persistence',async()=>{
   const directory=await mkdtemp(path.join(tmpdir(),'class2501-'));
   let server;let base;
-  const start=async()=>{server=createApp(directory);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));base='http://127.0.0.1:'+server.address().port};
+  const start=async()=>{server=await createApp(directory);await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));base='http://127.0.0.1:'+server.address().port};
   const stop=()=>new Promise((resolve,reject)=>{server.close(error=>error?reject(error):resolve());server.closeAllConnections()});
   function browser(){let cookie='';return async(route,method='GET',body,extra={})=>{const response=await fetch(base+route,{method,headers:{'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{}),...extra},...(body===undefined?{}:{body:JSON.stringify(body)})});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return {status:response.status,data:await response.json()}}}
   try{

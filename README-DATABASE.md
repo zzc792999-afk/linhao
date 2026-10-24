@@ -91,3 +91,5 @@ Claimable Neon 项目必须在过期前领取；领取后旧数据库密码会�
 - 初始化管理员登录资料已交付到本机独立文件，不在仓库或 public 中；不要分享密码文件。忘记密码时，维护者可在数据库中安全重置 admin_password_hash，并同时更新初始化环境变量，旧登录自动失效。
 - 新增 class_settings、polls、votes、checkins、admin_sessions、admin_audit 表；保留原 notes、likes、photos 和 note_cooldowns。数据库启动时执行幂等建表，内置投票采用软删除，重新部署不会复活已删除投票。
 - 本地未设置 ADMIN_PASSWORD_HASH 时后台保持关闭，不提供默认公开密码。只生成哈希可使用 `node --input-type=module -e "import {hashPassword} from './admin.js'; console.log(await hashPassword(process.env.NEW_ADMIN_PASSWORD))"`，通过环境变量提供待设置的新密码，避免把密码写进命令历史。
+
+首页班级影像使用 public/assets/class-film.mp4，提供原生视频播放、手机内联和全屏控制、HTTP 字节范围请求。文件位于 Git 仓库并随部署发布，不占用相册数据库容量。

@@ -31,6 +31,11 @@ test('cross-device sharing, ownership, validation, static isolation and restart 
     await b('/api/likes/p2','PUT',{liked:true});assert.equal((await a('/api/state')).data.likes.p2.count,2);
     for(const route of ['/server.js','/data/class.db','/package.json','/.git/config','/%2e%2e/server.js'])assert.equal((await fetch(base+route)).status,404);
     for(const route of ['/','/style.css','/app.js','/assets/p1.jpg','/assets/p2.jpg','/assets/p3.jpg'])assert.equal((await fetch(base+route)).status,200);
+    const film=await fetch(base+'/assets/class-film.mp4');assert.equal(film.status,200);assert.equal(film.headers.get('content-type'),'video/mp4');const filmBytes=Buffer.from(await film.arrayBuffer());
+    const partial=await fetch(base+'/assets/class-film.mp4',{headers:{Range:'bytes=0-31'}});assert.equal(partial.status,206);assert.deepEqual(Buffer.from(await partial.arrayBuffer()),filmBytes.subarray(0,32));assert.equal(partial.headers.get('content-range'),`bytes 0-31/${filmBytes.length}`);
+    const suffix=await fetch(base+'/assets/class-film.mp4',{headers:{Range:'bytes=-16'}});assert.equal(suffix.status,206);assert.deepEqual(Buffer.from(await suffix.arrayBuffer()),filmBytes.subarray(-16));
+    assert.equal((await fetch(base+'/assets/class-film.mp4',{headers:{Range:'bytes=9999999-'}})).status,416);
+    assert.equal((await fetch(base+'/assets/class-film.mp4',{method:'HEAD'})).headers.get('content-length'),String(filmBytes.length));
     await stop();await start();
     const persisted=await a('/api/state');assert.equal(persisted.data.notes[0].id,id);assert.equal(persisted.data.notes[0].mine,true);assert.equal(persisted.data.likes.p2.count,2);
     await a('/api/likes/p2','PUT',{liked:false});assert.equal((await b('/api/state')).data.likes.p2.count,1);

@@ -30,11 +30,23 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         const pathname = decodeURIComponent(url.pathname);
         const relative = pathname === '/' ? 'index.html' : ['/admin','/admin/'].includes(pathname) ? 'admin.html' : pathname.slice(1);
         // Only serve explicit public files, never the database or server source.
-        if (!['index.html','admin.html','admin-client.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg'].includes(relative)) return send(404,{error:'页面不存在'});
+        if (!['index.html','admin.html','admin-client.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
         let content = readFileSync(path.join(publicRoot, relative));
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
-        const type = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg'}[path.extname(relative)];
+        const type = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.mp4':'video/mp4'}[path.extname(relative)];
+        if(relative==='assets/class-film.mp4'){
+          const headers={'Content-Type':type,'Accept-Ranges':'bytes','Cache-Control':'public, max-age=3600'};
+          if(req.headers.range){
+            const range=/^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
+            let start=0,end=content.length-1;
+            if(!range||(!range[1]&&!range[2])){res.writeHead(416,{'Content-Range':`bytes */${content.length}`});return res.end()}
+            if(range[1]){start=Number(range[1]);if(range[2])end=Math.min(Number(range[2]),end)}else{start=Math.max(0,content.length-Number(range[2]))}
+            if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>end||start>=content.length){res.writeHead(416,{'Content-Range':`bytes */${content.length}`});return res.end()}
+            res.writeHead(206,{...headers,'Content-Length':end-start+1,'Content-Range':`bytes ${start}-${end}/${content.length}`});return res.end(req.method==='HEAD'?undefined:content.subarray(start,end+1));
+          }
+          res.writeHead(200,{...headers,'Content-Length':content.length});return res.end(req.method==='HEAD'?undefined:content);
+        }
         res.writeHead(200, {'Content-Type':type,'Cache-Control':'no-cache'});
         return res.end(req.method === 'HEAD' ? undefined : content);
       }

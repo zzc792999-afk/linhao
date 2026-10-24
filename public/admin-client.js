@@ -16,6 +16,7 @@
   $('#manage-notes').replaceChildren(...data.notes.map(n=>{const row=el('article',undefined,'manage-row');const info=el('div');info.append(el('strong',n.name),el('p',n.text),el('small',date(n.date)));row.append(info,action('删除留言',async()=>{if(!confirm('确定删除这条留言？'))return;await request('/notes/'+n.id,'DELETE');await load()}));return row}));
   $('#prev-page').disabled=page===0;$('#next-page').disabled=(page+1)*50>=data.stats.notes;$('#page-label').textContent=`第 ${page+1} 页 · 共 ${data.stats.notes} 条`;
   $('#manage-photos').replaceChildren(...data.photos.map(p=>{const item=el('article',undefined,'shared-photo');const link=el('a');link.href='/api/photos/'+p.id;link.target='_blank';link.rel='noopener';const img=el('img');img.src=link.href;img.alt=p.name;img.loading='lazy';link.append(img);item.append(link,el('p',p.name,'small-note'),action('删除照片',async()=>{if(!confirm('确定删除这张照片？'))return;await request('/photos/'+p.id,'DELETE');await load()}));return item}));
+  window.renderSocialAdmin(data,request,load,notice);
   $('#manage-audit').replaceChildren(...data.audit.map(a=>el('p',date(a.date)+' · '+a.action,'small-note')));notice('已登录 · 内容已更新');
  }finally{busy=false}}
  async function submit(event,task){event.preventDefault();const button=event.submitter;button.disabled=true;try{await task()}catch(e){notice(e.message)}finally{button.disabled=false}}

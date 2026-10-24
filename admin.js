@@ -40,7 +40,7 @@ export function adminRoutes(db,readJson){
   }
   if(url.pathname==='/api/admin/dashboard'&&req.method==='GET'){
    const page=Math.min(100000,Math.max(0,Number.parseInt(url.searchParams.get('page')||'0',10)||0));
-   send(200,{...await db.dashboard(page),fun:await db.fun(owner,classDay())});return true;
+   send(200,{...await db.dashboard(page),fun:await db.fun(owner,classDay()),extended:await db.extended(owner),challengeEntries:await db.challengeEntries()});return true;
   }
   if(url.pathname==='/api/admin/settings'&&req.method==='PUT'){
    const body=await readJson(req);
@@ -54,6 +54,17 @@ export function adminRoutes(db,readJson){
    if(typeof body.title!=='string'||!body.title.trim()||body.title.length>80||!Array.isArray(body.options)||body.options.length<2||body.options.length>6||body.options.some(o=>typeof o!=='string'||!o.trim()||o.length>30)||new Set(body.options.map(o=>o.trim())).size!==body.options.length){send(400,{error:'题目限 1–80 字，需要 2–6 个不重复的选项，每项限 30 字'});return true}
    if(await db.pollCount()>=20){send(409,{error:'最多保留 20 个投票，请先删除旧投票'});return true}
    const id=randomBytes(16).toString('hex');await db.createPoll({id,title:body.title.trim(),options:body.options.map(o=>o.trim()),date:new Date().toISOString()});await audit('创建投票',id);send(201,{ok:true,id});return true;
+  }
+  if(url.pathname==='/api/admin/achievements'&&req.method==='POST'){
+   const b=await readJson(req);
+   if(typeof b.title!=='string'||!b.title.trim()||b.title.length>60||typeof b.description!=='string'||b.description.length>500||!['🏆','🎓','✨','🤝','💻','🎉'].includes(b.icon)||typeof b.eventDay!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(b.eventDay)||!Number.isFinite(Date.parse(b.eventDay))||new Date(b.eventDay).toISOString().slice(0,10)!==b.eventDay){send(400,{error:'请填写有效的成就标题、日期、图标和说明（说明限 500 字）'});return true}
+   const id=randomBytes(16).toString('hex');
+   if(!await db.addAchievement({id,title:b.title.trim(),description:b.description.trim(),icon:b.icon,eventDay:b.eventDay,date:new Date().toISOString()})){send(409,{error:'成就墙最多 100 项，请先整理旧记录'});return true}
+   await audit('发布班级成就',id);send(201,{ok:true,id});return true;
+  }
+  const socialRemoval=/^\/api\/admin\/(capsules|drawings|challenges|achievements)\/([a-f0-9]{32})$/.exec(url.pathname);
+  if(socialRemoval&&req.method==='DELETE'){
+   await db.removeSocial(socialRemoval[1],socialRemoval[2]);await audit('管理删除'+{capsules:'时光胶囊',drawings:'涂鸦作品',challenges:'挑战记录',achievements:'班级成就'}[socialRemoval[1]],socialRemoval[2]);send(200,{ok:true});return true;
   }
   const target=/^\/api\/admin\/(notes|photos|polls)\/([a-z0-9-]{1,64})$/.exec(url.pathname);
   if(target&&req.method==='DELETE'){

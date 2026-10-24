@@ -1,3 +1,4 @@
+import {socialRoutes} from './social.js';
 import {adminRoutes,classDay} from './admin.js';
 import http from 'node:http';
 import sharp from 'sharp';
@@ -13,6 +14,7 @@ const hash = value => createHash('sha256').update(value).digest('hex');
 export async function createApp(dataDir = process.env.DATA_DIR || path.join(root, 'data'), injectedStore) {
   const db = injectedStore || await openStore({directory:dataDir,databaseUrl:process.env.DATABASE_URL,render:!!process.env.RENDER});
   const manage=adminRoutes(db,req=>readJson(req,8192));
+  const social=socialRoutes(db,req=>readJson(req,180000));
   const rates = new Map();
   let processingPhotos=0;
   const server = http.createServer(async (req, res) => {
@@ -30,7 +32,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         const pathname = decodeURIComponent(url.pathname);
         const relative = pathname === '/' ? 'index.html' : ['/admin','/admin/'].includes(pathname) ? 'admin.html' : pathname.slice(1);
         // Only serve explicit public files, never the database or server source.
-        if (!['index.html','admin.html','admin-client.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
+        if (!['index.html','admin.html','admin-client.js','social-client.js','social-admin.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
         let content = readFileSync(path.join(publicRoot, relative));
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
@@ -69,6 +71,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         if(++entry.count>120) return send(429,{error:'操作太频繁，请稍后再试'});
       }
       if(await manage(req,res,url,owner,send))return;
+      if(await social(req,res,url,owner,send))return;
       if(req.method==='GET'&&url.pathname==='/api/fun')return send(200,await db.fun(owner,classDay()));
       if(req.method==='PUT'&&url.pathname==='/api/checkin'){
         const body=await readJson(req);

@@ -1,4 +1,6 @@
+import {socialSchema,socialStore} from './social-database.js';
 export const activitySchema=[
+ ...socialSchema,
  'CREATE TABLE IF NOT EXISTS class_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)',
  'CREATE TABLE IF NOT EXISTS polls(id TEXT PRIMARY KEY,title TEXT NOT NULL,options TEXT NOT NULL,is_open INTEGER NOT NULL DEFAULT 1,deleted INTEGER NOT NULL DEFAULT 0,date TEXT NOT NULL)',
  'CREATE TABLE IF NOT EXISTS votes(poll TEXT NOT NULL,owner TEXT NOT NULL,choice INTEGER NOT NULL,PRIMARY KEY(poll,owner))',
@@ -12,6 +14,7 @@ export function activityStore(query){
  const setting=async(key,fallback='')=>(await rows('SELECT value FROM class_settings WHERE key=$1',[key]))[0]?.value??fallback;
  const saveSetting=(key,value)=>query('INSERT INTO class_settings(key,value) VALUES($1,$2) ON CONFLICT(key) DO UPDATE SET value=excluded.value',[key,value]);
  return {
+  ...socialStore(query),
   setting,saveSetting,
   async fun(owner,day){
    const [polls,votes,mine,checkins,announcement,roster]=await Promise.all([

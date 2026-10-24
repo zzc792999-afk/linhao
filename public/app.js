@@ -1,5 +1,6 @@
 'use strict';
 const $ = s => document.querySelector(s);
+const preview=document.body.dataset.mode==='preview';
 const storage = {get(key,fallback){try{return JSON.parse(localStorage.getItem('class2501-'+key))??fallback}catch{return fallback}},set(key,value){try{localStorage.setItem('class2501-'+key,JSON.stringify(value));return true}catch{return false}}};
 let toastTimer;
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),3000)}
@@ -10,9 +11,9 @@ async function api(path, options={}){
   const data=await response.json();if(!response.ok)throw new Error(data.error||'请求失败，请稍后重试');return data;
 }
 function errorMessage(error){return error.name==='TimeoutError'?'连接超时，请稍后重试':error instanceof TypeError?'连接失败，请检查网络后重试':error.message}
-let likes={};
+let likes=preview?storage.get('preview-likes',{}):{};
 function renderLikes(){document.querySelectorAll('.like').forEach(button=>{const state=likes[button.dataset.person]||{count:0,liked:false};button.classList.toggle('active',state.liked);button.setAttribute('aria-pressed',String(state.liked));button.textContent=(state.liked?'♥ ':'♡ ')+state.count})}
-document.querySelectorAll('.like').forEach(button=>{button.disabled=true;button.addEventListener('click',async()=>{button.disabled=true;try{const data=await api('/likes/'+button.dataset.person,{method:'PUT',body:JSON.stringify({liked:!likes[button.dataset.person]?.liked})});likes=data.likes;renderLikes()}catch(error){toast(errorMessage(error))}finally{button.disabled=false}})});
+document.querySelectorAll('.like').forEach(button=>{button.disabled=!preview;button.addEventListener('click',async()=>{if(preview){const person=button.dataset.person;const liked=!likes[person]?.liked;likes[person]={liked,count:liked?1:0};storage.set('preview-likes',likes);renderLikes();toast('点赞已记在这台设备上');return}button.disabled=true;try{const data=await api('/likes/'+button.dataset.person,{method:'PUT',body:JSON.stringify({liked:!likes[button.dataset.person]?.liked})});likes=data.likes;renderLikes()}catch(error){toast(errorMessage(error))}finally{button.disabled=false}})});
 document.addEventListener('click',event=>{const button=event.target.closest('.open-photo');if(!button)return;$('#modal-img').src=button.dataset.src;$('#modal-img').alt=button.dataset.title;$('#modal-title').textContent=button.dataset.title;$('#lightbox').showModal()});
 $('#close-modal').addEventListener('click',()=>$('#lightbox').close());
 $('#lightbox').addEventListener('click',event=>{if(event.target===$('#lightbox'))$('#lightbox').close()});
@@ -27,4 +28,18 @@ const status=document.createElement('div');status.className='sync-status';status
 let refreshing=false;
 let lastActivity=Date.now();
 async function refresh(){if(refreshing||document.hidden)return;refreshing=true;status.textContent='正在同步班级留言…';try{const data=await api('/state');notes=data.notes;likes=data.likes;renderNotes();renderLikes();document.querySelectorAll('.like').forEach(button=>button.disabled=false);status.textContent='● 已连接 · 每 30 秒同步 · 展示最新 200 条留言';status.classList.remove('offline')}catch(error){status.replaceChildren(document.createTextNode('连接失败，留言暂未同步。'));status.classList.add('offline');const retry=document.createElement('button');retry.textContent='重新连接';retry.addEventListener('click',refresh);status.append(retry)}finally{refreshing=false}}
-if(location.protocol==='file:'){status.textContent='请在网站文件夹运行 npm start，再访问 http://localhost:3000；共享留言需要服务器。';$('#message-form').querySelector('button').disabled=true}else{refresh();setInterval(()=>{if(Date.now()-lastActivity<120000)refresh();else if(!document.hidden)status.textContent='● 已连接 · 暂停空闲同步，操作页面后恢复'},30000);for(const event of ['pointerdown','keydown','scroll'])window.addEventListener(event,()=>{const paused=Date.now()-lastActivity>=120000;lastActivity=Date.now();if(paused)refresh()},{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden){lastActivity=Date.now();refresh()}})}
+if(preview){
+  renderLikes();
+  status.textContent='留言区暂未开放 · 当前点赞仅保存在本设备';
+  for(const input of $('#message-form').querySelectorAll('input,textarea,button'))input.disabled=true;
+  $('#message-form').querySelector('button').textContent='留言区即将开放';
+  $('#message').placeholder='先逛逛我们的班级，留言区稍后和大家见面。';
+}else if(location.protocol==='file:'){
+  status.textContent='共享留言需要服务器，请先打开网站展示版。';
+  $('#message-form').querySelector('button').disabled=true;
+}else{
+  refresh();
+  setInterval(()=>{if(Date.now()-lastActivity<120000)refresh();else if(!document.hidden)status.textContent='● 已连接 · 暂停空闲同步，操作页面后恢复'},30000);
+  for(const event of ['pointerdown','keydown','scroll'])window.addEventListener(event,()=>{const paused=Date.now()-lastActivity>=120000;lastActivity=Date.now();if(paused)refresh()},{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){lastActivity=Date.now();refresh()}});
+}

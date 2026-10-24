@@ -1,7 +1,5 @@
-25计算机1 · Render 免费部署版
+25计算机1 · 网站展示版
 
-共享留言使用 Neon 免费 PostgreSQL，Render 使用 Free Web Service，不需要持久磁盘。
-请先阅读 README.md 创建免费数据库，并在 Render 填写 DATABASE_URL，再部署。
-
-本地：安装 Node.js 24，首次运行 npm ci，然后双击“启动网站.bat”。
-当前没有远程数据库配置，也没有实际创建线上服务；代码已经支持免费部署。
+直接双击 public 文件夹里的 index.html 即可查看，不需要数据库或安装软件。
+Render 部署已改为 Static Site，发布目录 public，详见 README.md。
+留言区暂未开放；点赞仅保存在当前设备。

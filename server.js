@@ -1,4 +1,5 @@
 import http from 'node:http';
+import sharp from 'sharp';
 import { openStore } from './database.js';
 import { randomBytes, createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -11,6 +12,7 @@ const hash = value => createHash('sha256').update(value).digest('hex');
 export async function createApp(dataDir = process.env.DATA_DIR || path.join(root, 'data'), injectedStore) {
   const db = injectedStore || await openStore({directory:dataDir,databaseUrl:process.env.DATABASE_URL,render:!!process.env.RENDER});
   const rates = new Map();
+  let processingPhotos=0;
   const server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -55,8 +57,41 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       const listNotes = () => db.notes(owner);
       const listLikes = () => db.likes(owner);
       if (req.method === 'GET' && url.pathname === '/api/state') {
-        const [notes,likes]=await Promise.all([listNotes(),listLikes()]);
-        return send(200,{notes,likes});
+        const [notes,likes,photos]=await Promise.all([listNotes(),listLikes(),db.photos(owner)]);
+        return send(200,{notes,likes,photos});
+      }
+      const photoRoute=/^\/api\/photos\/([a-f0-9]{32})$/.exec(url.pathname);
+      if(['GET','HEAD'].includes(req.method)&&photoRoute){
+        const photo=await db.photo(photoRoute[1]);
+        if(!photo)return send(404,{error:'照片不存在或已删除'});
+        res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'private, no-cache','Content-Length':photo.data.length});
+        return res.end(req.method==='HEAD'?undefined:Buffer.from(photo.data));
+      }
+      if(req.method==='DELETE'&&photoRoute){
+        if(!await db.removePhoto(photoRoute[1],owner))return send(403,{error:'只能删除此浏览器上传的照片'});
+        return send(200,{photos:await db.photos(owner)});
+      }
+      if(req.method==='POST'&&url.pathname==='/api/photos'){
+        if(!/^image\/(jpeg|png|webp)$/i.test(req.headers['content-type']||''))return send(415,{error:'请上传 JPG、PNG 或 WebP 照片'});
+        if(processingPhotos>=2)return send(429,{error:'正在处理其他照片，请稍后再试'});
+        processingPhotos++;
+        try{
+          const chunks=[];let size=0;
+          for await(const chunk of req){size+=chunk.length;if(size>8*1024*1024)throw Object.assign(new Error('图片过大，请压缩后上传（最大 8MB）'),{status:413});chunks.push(chunk)}
+          let data;
+          try{
+            const image=sharp(Buffer.concat(chunks),{limitInputPixels:40000000,animated:false});
+            const meta=await image.metadata();
+            if(!['jpeg','png','webp'].includes(meta.format))throw Error();
+            data=await image.rotate().resize({width:1600,height:1600,fit:'inside',withoutEnlargement:true}).jpeg({quality:78}).toBuffer();
+          }catch{ return send(400,{error:'图片无法读取，请选择有效的 JPG、PNG 或 WebP 照片'}) }
+          if(data.length>1024*1024)return send(413,{error:'压缩后的照片仍超过 1MB，请缩小后重试'});
+          const id=randomBytes(16).toString('hex');
+          const name=(url.searchParams.get('name')||'班级瞬间').trim().slice(0,100)||'班级瞬间';
+          const added=await db.addPhoto({id,owner,name,date:new Date().toISOString(),data});
+          if(!added)return send(409,{error:'共享相册已满（最多 200 张、100MB），请先删除部分自己的照片'});
+          return send(201,{id,photos:await db.photos(owner)});
+        }finally{processingPhotos--}
       }
       if (req.method === 'POST' && url.pathname === '/api/notes') {
         const body=await readJson(req);

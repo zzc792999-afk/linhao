@@ -10,8 +10,21 @@ export function sqliteStore(directory) {
     CREATE TABLE IF NOT EXISTS notes(id TEXT PRIMARY KEY, owner TEXT NOT NULL, name TEXT NOT NULL, text TEXT NOT NULL, date TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS notes_date ON notes(date DESC);
     CREATE TABLE IF NOT EXISTS likes(person TEXT NOT NULL, owner TEXT NOT NULL, PRIMARY KEY(person,owner));
-    CREATE TABLE IF NOT EXISTS note_cooldowns(owner TEXT PRIMARY KEY, posted_at INTEGER NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS note_cooldowns(owner TEXT PRIMARY KEY, posted_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS photos(id TEXT PRIMARY KEY,owner TEXT NOT NULL,name TEXT NOT NULL,date TEXT NOT NULL,data BLOB NOT NULL);`);
   return {
+    photos:async owner=>db.prepare('SELECT id,name,date,owner=? AS mine FROM photos ORDER BY date DESC,id DESC').all(owner).map(p=>({...p,mine:!!p.mine})),
+    photo:async id=>db.prepare('SELECT data FROM photos WHERE id=?').get(id),
+    async addPhoto(photo){
+      db.exec('BEGIN IMMEDIATE');
+      try{
+        const usage=db.prepare('SELECT COUNT(*) AS count,COALESCE(SUM(length(data)),0) AS bytes FROM photos').get();
+        if(usage.count>=200||usage.bytes+photo.data.length>100*1024*1024){db.exec('ROLLBACK');return false}
+        db.prepare('INSERT INTO photos VALUES(?,?,?,?,?)').run(photo.id,photo.owner,photo.name,photo.date,photo.data);
+        db.exec('COMMIT');return true;
+      }catch(error){db.exec('ROLLBACK');throw error}
+    },
+    removePhoto:async(id,owner)=>!!db.prepare('DELETE FROM photos WHERE id=? AND owner=?').run(id,owner).changes,
     health:async()=>db.prepare('SELECT 1 AS ok').get().ok===1,
     notes:async owner=>db.prepare('SELECT id,name,text,date,owner=? AS mine FROM notes ORDER BY date DESC,id DESC LIMIT 200').all(owner).map(n=>({...n,mine:!!n.mine})),
     likes:async owner=>Object.fromEntries(['p1','p2','p3'].map(person=>[person,{count:db.prepare('SELECT COUNT(*) AS n FROM likes WHERE person=?').get(person).n,liked:!!db.prepare('SELECT 1 FROM likes WHERE person=? AND owner=?').get(person,owner)}])),
@@ -36,9 +49,24 @@ export async function postgresStore(pool) {
     'CREATE TABLE IF NOT EXISTS notes(id TEXT PRIMARY KEY,owner TEXT NOT NULL,name TEXT NOT NULL,text TEXT NOT NULL,date TEXT NOT NULL)',
     'CREATE INDEX IF NOT EXISTS notes_date ON notes(date DESC)',
     'CREATE TABLE IF NOT EXISTS likes(person TEXT NOT NULL,owner TEXT NOT NULL,PRIMARY KEY(person,owner))',
-    'CREATE TABLE IF NOT EXISTS note_cooldowns(owner TEXT PRIMARY KEY,posted_at BIGINT NOT NULL)'
+    'CREATE TABLE IF NOT EXISTS note_cooldowns(owner TEXT PRIMARY KEY,posted_at BIGINT NOT NULL)',
+    'CREATE TABLE IF NOT EXISTS photos(id TEXT PRIMARY KEY,owner TEXT NOT NULL,name TEXT NOT NULL,date TEXT NOT NULL,data BYTEA NOT NULL)'
   ]) await pool.query(statement);
   return {
+    photos:async owner=>(await pool.query('SELECT id,name,date,owner=$1 AS mine FROM photos ORDER BY date DESC,id DESC',[owner])).rows,
+    photo:async id=>(await pool.query('SELECT data FROM photos WHERE id=$1',[id])).rows[0],
+    async addPhoto(photo){
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        await client.query('LOCK TABLE photos IN SHARE ROW EXCLUSIVE MODE');
+        const {rows}=await client.query('SELECT COUNT(*)::int AS count,COALESCE(SUM(octet_length(data)),0) AS bytes FROM photos');
+        if(rows[0].count>=200||Number(rows[0].bytes)+photo.data.length>100*1024*1024){await client.query('ROLLBACK');return false}
+        await client.query('INSERT INTO photos VALUES($1,$2,$3,$4,$5)',[photo.id,photo.owner,photo.name,photo.date,photo.data]);
+        await client.query('COMMIT');return true;
+      }catch(error){await client.query('ROLLBACK');throw error}finally{client.release()}
+    },
+    removePhoto:async(id,owner)=>!!(await pool.query('DELETE FROM photos WHERE id=$1 AND owner=$2',[id,owner])).rowCount,
     health:async()=> (await pool.query('SELECT 1 AS ok')).rows[0].ok===1,
     notes:async owner=>(await pool.query('SELECT id,name,text,date,owner=$1 AS mine FROM notes ORDER BY date DESC,id DESC LIMIT 200',[owner])).rows,
     likes:async owner=>{

@@ -1,6 +1,6 @@
 # 25计算机1 · 班级网站
 
-[现有展示站](https://zzc792999-afk.github.io/linhao/) 可继续访问。
+[在线共享留言版](https://class-25-computer-1-live.onrender.com/) 已上线；[原入口](https://zzc792999-afk.github.io/linhao/) 自动进入共享版，静态展示页保留在 /linhao/preview.html。
 
 [部署共享留言版到 Render](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Fzzc792999-afk%2Flinhao)
 
@@ -15,7 +15,7 @@
 
 连接字符串包含密码，只填写到 Render 的环境变量中，不要提交到 GitHub。
 
-当前 GitHub Pages 地址持续提供展示版，不包含后端。Render Node 服务会自动启用共享模式，部署完成后使用 Render 的新网址发布和查看留言。
+GitHub Pages 入口跳转至 Render Node 服务。Node 服务已启用共享模式；数据库连接通过 Render Secret File 配置，未写入源码或浏览器。
 
 render-preview.yaml 保留无数据库的 Render 静态站配置。更多后端说明见 README-DATABASE.md。
 
@@ -28,3 +28,8 @@ npm test 验证 API、共享读取、删除权限、点赞和本地重启持久�
 npm run db:check 验证真实数据库，并自动清理测试数据。
 
 public/ 是网站源码；docs/ 是 GitHub Pages 展示副本。
+
+## Neon 开发工具
+
+项目已安装 neon、neon-postgres 技能（.agents/skills）和项目 OAuth MCP 配置（.codex/config.toml），服务地址固定到本项目，不包含 API key。
+.neon 为本机项目关联，由 .gitignore 排除；skills-lock.json 记录技能来源与校验信息。

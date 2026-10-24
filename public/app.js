@@ -21,6 +21,7 @@ let photos=[];
 let photoSignature='';
 const albumStatus=document.createElement('p');albumStatus.className='small-note';albumStatus.setAttribute('role','status');$('#album-grid').before(albumStatus);
 function renderPhotos(){
+  $('#album-count').textContent='青春相册 · '+(photos.length+3)+' 张照片';
   const signature=JSON.stringify(photos);if(signature===photoSignature)return;photoSignature=signature;
   document.querySelectorAll('.shared-photo').forEach(item=>item.remove());
   for(const photo of photos){
@@ -48,7 +49,7 @@ $('#upload').addEventListener('change',async event=>{
 });
 
 let notes=[];
-function renderNotes(){const target=$('#notes');target.replaceChildren();if(!notes.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='还没有留言。来贴上第一张青春便签吧。';target.append(empty);return}notes.forEach(note=>{const item=document.createElement('article');item.className='note';const head=document.createElement('div');head.className='note-header';const name=document.createElement('strong');name.textContent=note.name;const time=document.createElement('small');time.textContent=new Date(note.date).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const text=document.createElement('p');text.textContent=note.text;head.append(name,time);item.append(head,text);if(note.mine){const remove=document.createElement('button');remove.className='delete-note';remove.textContent='删除我的留言';remove.addEventListener('click',async()=>{remove.disabled=true;try{const data=await api('/notes/'+note.id,{method:'DELETE'});notes=data.notes;renderNotes();toast('留言已删除')}catch(error){toast(errorMessage(error));remove.disabled=false}});item.append(remove)}target.append(item)})}
+function renderNotes(){$('#message-count').textContent=notes.length?'最新 '+notes.length+' 条留言':'还没有留言，来留下第一句话';const target=$('#notes');target.replaceChildren();if(!notes.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='还没有留言。来贴上第一张青春便签吧。';target.append(empty);return}notes.forEach(note=>{const item=document.createElement('article');item.className='note';const head=document.createElement('div');head.className='note-header';const name=document.createElement('strong');name.textContent=note.name;const time=document.createElement('small');time.textContent=new Date(note.date).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const text=document.createElement('p');text.textContent=note.text;head.append(name,time);item.append(head,text);if(note.mine){const remove=document.createElement('button');remove.className='delete-note';remove.textContent='删除我的留言';remove.addEventListener('click',async()=>{remove.disabled=true;try{const data=await api('/notes/'+note.id,{method:'DELETE'});notes=data.notes;renderNotes();toast('留言已删除')}catch(error){toast(errorMessage(error));remove.disabled=false}});item.append(remove)}target.append(item)})}
 $('#message').addEventListener('input',()=>$('#char-count').textContent=$('#message').value.length+' / 200');
 $('#message-form').addEventListener('submit',async event=>{event.preventDefault();const name=$('#nickname').value.trim(),text=$('#message').value.trim();if(!name||!text){toast('请填写昵称和留言内容');return}const button=event.submitter;button.disabled=true;button.textContent='正在发布…';try{const data=await api('/notes',{method:'POST',body:JSON.stringify({name,text})});notes=data.notes;renderNotes();$('#message').value='';$('#char-count').textContent='0 / 200';storage.set('nickname',name);toast('留言已发布，其他设备也能看到。')}catch(error){toast(errorMessage(error))}finally{button.disabled=false;button.textContent='贴上留言 ↗'}});
 $('#nickname').value=storage.get('nickname','');
@@ -73,3 +74,7 @@ if(preview){
   for(const event of ['pointerdown','keydown','scroll'])window.addEventListener(event,()=>{const paused=Date.now()-lastActivity>=120000;lastActivity=Date.now();if(paused)refresh()},{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){lastActivity=Date.now();refresh()}});
 }
+function openPublicSection(hash){const id={'#album':'album-fold','#messages':'messages-fold'}[hash];if(id)document.getElementById(id).open=true}
+openPublicSection(location.hash);
+window.addEventListener('hashchange',()=>openPublicSection(location.hash));
+document.addEventListener('click',event=>{const link=event.target.closest('a[href="#album"],a[href="#messages"]');if(link)openPublicSection(link.getAttribute('href'))});

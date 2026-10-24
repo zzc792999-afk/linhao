@@ -1,3 +1,4 @@
+import {adminRoutes,classDay} from './admin.js';
 import http from 'node:http';
 import sharp from 'sharp';
 import { openStore } from './database.js';
@@ -11,6 +12,7 @@ const publicRoot = path.join(root, 'public');
 const hash = value => createHash('sha256').update(value).digest('hex');
 export async function createApp(dataDir = process.env.DATA_DIR || path.join(root, 'data'), injectedStore) {
   const db = injectedStore || await openStore({directory:dataDir,databaseUrl:process.env.DATABASE_URL,render:!!process.env.RENDER});
+  const manage=adminRoutes(db,req=>readJson(req,8192));
   const rates = new Map();
   let processingPhotos=0;
   const server = http.createServer(async (req, res) => {
@@ -26,9 +28,9 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       if (!url.pathname.startsWith('/api/')) {
         if (!['GET','HEAD'].includes(req.method)) return send(405,{error:'不支持的请求方式'});
         const pathname = decodeURIComponent(url.pathname);
-        const relative = pathname === '/' ? 'index.html' : pathname.slice(1);
+        const relative = pathname === '/' ? 'index.html' : ['/admin','/admin/'].includes(pathname) ? 'admin.html' : pathname.slice(1);
         // Only serve explicit public files, never the database or server source.
-        if (!['index.html','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg'].includes(relative)) return send(404,{error:'页面不存在'});
+        if (!['index.html','admin.html','admin-client.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg'].includes(relative)) return send(404,{error:'页面不存在'});
         let content = readFileSync(path.join(publicRoot, relative));
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
@@ -53,6 +55,21 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         if (rates.size > 2000) for (const [ip, item] of rates) if(now-item.start>60000) rates.delete(ip);
         let entry=rates.get(key); if(!entry || now-entry.start>60000){entry={start:now,count:0};rates.set(key,entry)}
         if(++entry.count>120) return send(429,{error:'操作太频繁，请稍后再试'});
+      }
+      if(await manage(req,res,url,owner,send))return;
+      if(req.method==='GET'&&url.pathname==='/api/fun')return send(200,await db.fun(owner,classDay()));
+      if(req.method==='PUT'&&url.pathname==='/api/checkin'){
+        const body=await readJson(req);
+        if(typeof body.name!=='string'||!body.name.trim()||body.name.length>16||!['元气满满','专心写码','需要充电','快乐摸鱼'].includes(body.mood))return send(400,{error:'请填写 1–16 字昵称并选择今天的心情'});
+        await db.checkin(classDay(),owner,body.name.trim(),body.mood,new Date().toISOString());return send(200,await db.fun(owner,classDay()));
+      }
+      const voteRoute=/^\/api\/polls\/([a-z0-9-]{1,64})\/vote$/.exec(url.pathname);
+      if(req.method==='PUT'&&voteRoute){
+        const body=await readJson(req),poll=await db.poll(voteRoute[1]);
+        if(!poll||!poll.is_open)return send(409,{error:'投票已结束或不存在'});
+        if(!Number.isInteger(body.choice)||body.choice<0||body.choice>=JSON.parse(poll.options).length)return send(400,{error:'请选择有效选项'});
+        if(!await db.vote(poll.id,owner,body.choice))return send(409,{error:'投票已结束'});
+        return send(200,await db.fun(owner,classDay()));
       }
       const listNotes = () => db.notes(owner);
       const listLikes = () => db.likes(owner);
@@ -121,10 +138,10 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
   server.on('close',()=>{db.close().catch(()=>console.error('关闭数据库时发生错误'))});
   return server;
 }
-async function readJson(req){
+async function readJson(req,limit=4096){
   if(!req.headers['content-type']?.startsWith('application/json'))throw Object.assign(new Error('需要 JSON 请求'),{status:415});
   let size=0;const chunks=[];
-  for await(const chunk of req){size+=chunk.length;if(size>4096)throw Object.assign(new Error('请求内容过大'),{status:413});chunks.push(chunk)}
+  for await(const chunk of req){size+=chunk.length;if(size>limit)throw Object.assign(new Error('请求内容过大'),{status:413});chunks.push(chunk)}
   try{const body=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!body||Array.isArray(body)||typeof body!=='object')throw Error();return body}catch{throw Object.assign(new Error('请求格式无效'),{status:400})}
 }
 if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){

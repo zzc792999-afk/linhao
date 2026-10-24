@@ -82,3 +82,12 @@ PGlite 测试验证 PostgreSQL 查询逻辑；真实 Neon 网络连接、TLS、�
 npm start 会读取本机 .env 的 DATABASE_URL，Node 服务会自动把首页切换到共享模式。静态发布的 public/docs 页面继续保持展示模式。
 运行 npm run db:check 可对真实数据库执行读写和权限验证，检查完成后自动删除测试记录。
 Claimable Neon 项目必须在过期前领取；领取后旧数据库密码会轮换，需要重新获取并设置 DATABASE_URL。
+## 班级游乐场与管理员后台
+
+- 正式站首页增加班级投票、每日心情签到、随机点名、幸运签和班级公告。投票按浏览器记一票，可在结束前改选；签到按北京时间每天记一份，可修改当天心情。它们不是实名身份或正式选举系统。
+- `/admin` 是管理后台，使用独立密码。可管理全部留言与上传照片、发布和结束投票、设置公告与点名名单、查看统计和管理记录、修改管理员密码。留言管理每页 50 条，支持翻页。
+- 管理员密码使用随机盐及 scrypt 派生，不保留明文。初始化时将编码后的 `ADMIN_PASSWORD_HASH` 配置为服务器环境变量。后续在后台修改密码会将新哈希保存在现有数据库，优先于初始化环境变量。
+- 登录会话使用 HttpOnly、SameSite=Strict Cookie，生产环境启用 Secure。服务端只保存会话令牌哈希，会话有效期 8 小时，退出后撤销当前会话，修改密码后所有旧会话失效。管理接口继续执行来源校验，并限制登录尝试。
+- 初始化管理员登录资料已交付到本机独立文件，不在仓库或 public 中；不要分享密码文件。忘记密码时，维护者可在数据库中安全重置 admin_password_hash，并同时更新初始化环境变量，旧登录自动失效。
+- 新增 class_settings、polls、votes、checkins、admin_sessions、admin_audit 表；保留原 notes、likes、photos 和 note_cooldowns。数据库启动时执行幂等建表，内置投票采用软删除，重新部署不会复活已删除投票。
+- 本地未设置 ADMIN_PASSWORD_HASH 时后台保持关闭，不提供默认公开密码。只生成哈希可使用 `node --input-type=module -e "import {hashPassword} from './admin.js'; console.log(await hashPassword(process.env.NEW_ADMIN_PASSWORD))"`，通过环境变量提供待设置的新密码，避免把密码写进命令历史。

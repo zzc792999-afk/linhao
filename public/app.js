@@ -54,8 +54,9 @@ $('#message-form').addEventListener('submit',async event=>{event.preventDefault(
 $('#nickname').value=storage.get('nickname','');
 const status=document.createElement('div');status.className='sync-status';status.setAttribute('role','status');$('#notes').before(status);
 let refreshing=false;
+let classReady=false;
 let lastActivity=Date.now();
-async function refresh(){if(refreshing||document.hidden)return;refreshing=true;status.textContent='正在同步班级留言…';try{const data=await api('/state');notes=data.notes;likes=data.likes;photos=data.photos||[];renderNotes();renderLikes();renderPhotos();albumStatus.textContent=`共享相册 · 已上传 ${photos.length} 张 · 每 30 秒同步`;document.querySelectorAll('.like').forEach(button=>button.disabled=false);status.textContent='● 已连接 · 每 30 秒同步 · 展示最新 200 条留言';status.classList.remove('offline')}catch(error){status.replaceChildren(document.createTextNode('连接失败，留言暂未同步。'));status.classList.add('offline');const retry=document.createElement('button');retry.textContent='重新连接';retry.addEventListener('click',refresh);status.append(retry)}finally{refreshing=false}}
+async function refresh(){if(refreshing||document.hidden)return;refreshing=true;status.textContent='正在同步班级留言…';try{const data=await api('/state');notes=data.notes;likes=data.likes;photos=data.photos||[];renderNotes();renderLikes();renderPhotos();albumStatus.textContent=`共享相册 · 已上传 ${photos.length} 张 · 每 30 秒同步`;document.querySelectorAll('.like').forEach(button=>button.disabled=false);status.textContent='● 已连接 · 每 30 秒同步 · 展示最新 200 条留言';status.classList.remove('offline');classReady=true;window.dispatchEvent(new Event('class-synced'))}catch(error){status.replaceChildren(document.createTextNode('连接失败，留言暂未同步。'));status.classList.add('offline');const retry=document.createElement('button');retry.textContent='重新连接';retry.addEventListener('click',refresh);status.append(retry)}finally{refreshing=false}}
 if(preview){
   $('#upload').disabled=true;albumStatus.textContent='当前为静态展示版，请打开班级网站正式网址上传共享照片。';
   renderLikes();

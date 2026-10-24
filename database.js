@@ -1,3 +1,4 @@
+import {activitySchema,activityStore} from './activity-database.js';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -12,7 +13,15 @@ export function sqliteStore(directory) {
     CREATE TABLE IF NOT EXISTS likes(person TEXT NOT NULL, owner TEXT NOT NULL, PRIMARY KEY(person,owner));
     CREATE TABLE IF NOT EXISTS note_cooldowns(owner TEXT PRIMARY KEY, posted_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS photos(id TEXT PRIMARY KEY,owner TEXT NOT NULL,name TEXT NOT NULL,date TEXT NOT NULL,data BLOB NOT NULL);`);
+  for(const sql of activitySchema)db.exec(sql);
+  const query=async(sql,args=[])=>{
+    const values=[];const converted=sql.replace(/\$(\d+)/g,(_,n)=>{values.push(args[Number(n)-1]);return '?'});
+    const stmt=db.prepare(converted);
+    if(/^SELECT/i.test(sql))return {rows:stmt.all(...values),rowCount:0};
+    return {rows:[],rowCount:Number(stmt.run(...values).changes)};
+  };
   return {
+    ...activityStore(query),
     photos:async owner=>db.prepare('SELECT id,name,date,owner=? AS mine FROM photos ORDER BY date DESC,id DESC').all(owner).map(p=>({...p,mine:!!p.mine})),
     photo:async id=>db.prepare('SELECT data FROM photos WHERE id=?').get(id),
     async addPhoto(photo){
@@ -51,8 +60,9 @@ export async function postgresStore(pool) {
     'CREATE TABLE IF NOT EXISTS likes(person TEXT NOT NULL,owner TEXT NOT NULL,PRIMARY KEY(person,owner))',
     'CREATE TABLE IF NOT EXISTS note_cooldowns(owner TEXT PRIMARY KEY,posted_at BIGINT NOT NULL)',
     'CREATE TABLE IF NOT EXISTS photos(id TEXT PRIMARY KEY,owner TEXT NOT NULL,name TEXT NOT NULL,date TEXT NOT NULL,data BYTEA NOT NULL)'
-  ]) await pool.query(statement);
+  ,...activitySchema]) await pool.query(statement);
   return {
+    ...activityStore((sql,args)=>pool.query(sql,args)),
     photos:async owner=>(await pool.query('SELECT id,name,date,owner=$1 AS mine FROM photos ORDER BY date DESC,id DESC',[owner])).rows,
     photo:async id=>(await pool.query('SELECT data FROM photos WHERE id=$1',[id])).rows[0],
     async addPhoto(photo){

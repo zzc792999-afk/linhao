@@ -23,7 +23,8 @@ for(const backend of ['sqlite','postgres'])test(backend+': shared challenge, ser
   assert.equal((await a('/capsules','POST',{name:'甲',title:'时间无效',content:'secret',unlockAt:new Date().toISOString()})).status,400);
   const future=new Date(Date.now()+86400000).toISOString(),secret='绝不能提前泄露的内容<future-secret>';
   let r=await a('/capsules','POST',{name:'甲',title:'未来的我们',content:secret,unlockAt:future});assert.equal(r.status,201);const capsule=r.data.capsules[0];assert.equal(capsule.content,null);assert.equal(capsule.locked,true);assert.equal(capsule.mine,true);assert.equal(JSON.stringify(r.data).includes(secret),false);
-  for(const get of [await a('/extended?now=2999-01-01'),await b('/extended'),await admin('/admin/dashboard')])assert.equal(JSON.stringify(get.data).includes(secret),false);
+  for(const get of [await a('/extended?now=2999-01-01&includeSealedContent=true'),await b('/extended')])assert.equal(JSON.stringify(get.data).includes(secret),false);
+  const adminCapsule=(await admin('/admin/dashboard')).data.extended.capsules.find(c=>c.id===capsule.id);assert.equal(adminCapsule.content,secret);assert.equal(adminCapsule.locked,true);assert.equal((await b('/admin/dashboard')).status,401);assert.equal((await a('/extended')).data.capsules[0].content,null);
   assert.equal((await b('/capsules/'+capsule.id,'DELETE')).status,403);
   const opened=await store.extended('someone',new Date(Date.now()+2*86400000).toISOString());assert.equal(opened.capsules[0].content,secret);assert.equal(opened.capsules[0].locked,false);
   const strokes=[{color:'#234b3a',width:7,points:[[0.1,0.2],[0.7,0.8]]}];

@@ -40,7 +40,7 @@ export function adminRoutes(db,readJson){
   }
   if(url.pathname==='/api/admin/dashboard'&&req.method==='GET'){
    const page=Math.min(100000,Math.max(0,Number.parseInt(url.searchParams.get('page')||'0',10)||0));
-   send(200,{...await db.dashboard(page),fun:await db.fun(owner,classDay()),extended:await db.extended(owner),challengeEntries:await db.challengeEntries()});return true;
+   send(200,{...await db.dashboard(page),fun:await db.fun(owner,classDay()),extended:await db.extended(owner,new Date().toISOString(),true),challengeEntries:await db.challengeEntries()});return true;
   }
   if(url.pathname==='/api/admin/settings'&&req.method==='PUT'){
    const body=await readJson(req);

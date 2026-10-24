@@ -18,16 +18,16 @@ export function socialStore(query){
   return !!(await query(`INSERT INTO ${table}(${columns}) SELECT ${markers} WHERE (SELECT COUNT(*) FROM ${table})<$${n+1} AND (SELECT COUNT(*) FROM ${table} WHERE owner=$${n+2})<$${n+3}`,[...values,limit,owner,personal])).rowCount;
  };
  return {
-  async extended(owner,now=new Date().toISOString()){
+  async extended(owner,now=new Date().toISOString(),includeSealedContent=false){
    const [players,capsules,drawings,achievements]=await Promise.all([
     rows('SELECT id,owner,name,answers,date FROM class_challenges ORDER BY date,id'),
-    rows('SELECT id,name,title,unlock_at,date,CASE WHEN unlock_at<=$1 THEN content ELSE NULL END AS content,CASE WHEN owner=$2 THEN 1 ELSE 0 END AS mine FROM class_capsules ORDER BY unlock_at,id',[now,owner]),
+    rows('SELECT id,name,title,unlock_at,date,CASE WHEN unlock_at<=$1 OR $3=1 THEN content ELSE NULL END AS content,CASE WHEN owner=$2 THEN 1 ELSE 0 END AS mine FROM class_capsules ORDER BY unlock_at,id',[now,owner,includeSealedContent?1:0]),
     rows('SELECT id,name,title,date,CASE WHEN owner=$1 THEN 1 ELSE 0 END AS mine FROM class_drawings ORDER BY date DESC,id DESC',[owner]),
     rows('SELECT id,title,description,icon,event_day,date FROM class_achievements ORDER BY event_day DESC,date DESC,id DESC')]);
    const parsed=players.map(p=>({...p,answers:JSON.parse(p.answers)}));const counts=questions.map((q,i)=>q.options.map((_,j)=>parsed.filter(p=>p.answers[i]===j).length));
    const ranked=parsed.map(p=>({id:p.id,name:p.name,date:p.date,mine:p.owner===owner,score:Math.round(p.answers.filter((a,i)=>counts[i][a]===Math.max(...counts[i])).length/questions.length*100)})).sort((a,b)=>b.score-a.score||a.date.localeCompare(b.date));
    const me=parsed.find(p=>p.owner===owner);
-   return {challenge:{questions,participants:parsed.length,myAnswers:me?.answers??null,myScore:ranked.find(p=>p.mine)?.score??null,counts:me?counts:null,leaderboard:ranked.slice(0,20)},capsules:capsules.map(c=>({...c,mine:!!c.mine,locked:c.content===null})),drawings:drawings.map(d=>({...d,mine:!!d.mine})),achievements};
+   return {challenge:{questions,participants:parsed.length,myAnswers:me?.answers??null,myScore:ranked.find(p=>p.mine)?.score??null,counts:me?counts:null,leaderboard:ranked.slice(0,20)},capsules:capsules.map(c=>({...c,mine:!!c.mine,locked:c.unlock_at>now})),drawings:drawings.map(d=>({...d,mine:!!d.mine})),achievements};
   },
   async submitChallenge(p){return !!(await query('INSERT INTO class_challenges(id,owner,name,answers,date) SELECT $1,$2,$3,$4,$5 WHERE (SELECT COUNT(*) FROM class_challenges)<500 OR EXISTS(SELECT 1 FROM class_challenges WHERE owner=$2) ON CONFLICT(owner) DO UPDATE SET name=excluded.name,answers=excluded.answers',[p.id,p.owner,p.name,JSON.stringify(p.answers),p.date])).rowCount},
   addCapsule:p=>add('class_capsules','id,owner,name,title,content,unlock_at,date',[p.id,p.owner,p.name,p.title,p.content,p.unlockAt,p.date],p.owner,200),

@@ -1,13 +1,13 @@
 services:
   - type: web
-    name: class-25-computer-1-preview
-    runtime: static
-    buildCommand: echo "Static site ready"
-    staticPublishPath: ./public
-    headers:
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: Referrer-Policy
-        value: same-origin
+    name: class-25-computer-1
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false

@@ -27,7 +27,7 @@ render.yaml 已改为 Static Site，发布 public 目录，没有付费磁盘、
 ## 以后启用共享留言
 
 后端代码和测试仍保留在仓库中。数据库部署说明见 README-DATABASE.md，配置见 render-database.yaml。
-届时先接入外部数据库，部署 Node 服务，再移除 public/index.html 的 data-mode="preview" 属性即可启用共享功能。
+接入外部数据库后，用 render-database.yaml 部署 Node 服务；Node 服务会自动启用共享模式，静态 public/docs 继续提供展示版。
 
 ## 本地源文件
 
@@ -37,3 +37,9 @@ public/app.js：交互
 public/assets/：三张照片
 
 点赞在展示版中仅保存在本设备；添加的照片仅在本次页面打开期间展示。
+
+## 数据库连接验证
+
+在本机 .env 中配置 DATABASE_URL 后运行 npm run db:check，检查数据库建表、读写、跨设备读取、删除权限和点赞，并自动清理测试数据。npm start 会自动读取这个不提交到仓库的 .env。
+
+Claimable Neon 数据库需要在领取前完成保留手续；未领取项目会在 72 小时后过期。领取流程会轮换连接密码，领取后请在 Neon 的 Connect 中获取新的 DATABASE_URL，并填写到 Render 环境变量。不要继续使用领取前的旧连接信息。

@@ -27,7 +27,9 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         const relative = pathname === '/' ? 'index.html' : pathname.slice(1);
         // Only serve explicit public files, never the database or server source.
         if (!['index.html','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg'].includes(relative)) return send(404,{error:'页面不存在'});
-        const content = readFileSync(path.join(publicRoot, relative));
+        let content = readFileSync(path.join(publicRoot, relative));
+        // The Node deployment enables the shared API; static hosting stays a preview.
+        if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
         const type = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg'}[path.extname(relative)];
         res.writeHead(200, {'Content-Type':type,'Cache-Control':'no-cache'});
         return res.end(req.method === 'HEAD' ? undefined : content);

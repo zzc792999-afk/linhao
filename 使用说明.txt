@@ -1,0 +1,9 @@
+网站已升级为 Render 后端版。
+
+本地启动：双击“启动网站.bat”，然后在浏览器访问 http://localhost:3000。
+需要先安装 Node.js 24，不能通过双击 HTML 使用共享留言。
+
+Render 部署：请阅读 README.md。仓库已附 render.yaml，可用 Blueprint 创建。
+注意：这套配置使用付费 Web Service + 持久磁盘。免费实例不支持该磁盘。
+
+留言与点赞全班共享；添加的照片仍只在当前页面临时预览。

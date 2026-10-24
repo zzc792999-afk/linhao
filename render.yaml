@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: class-25-computer-1
+    runtime: node
+    plan: starter
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: class-data
+      mountPath: /var/data
+      sizeGB: 1

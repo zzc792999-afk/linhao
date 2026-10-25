@@ -1,8 +1,10 @@
 import {socialSchema,socialStore} from './social-database.js';
 import {boardSchema,boardStore} from './board-database.js';
+import {arcadeSchema,arcadeStore} from './arcade-database.js';
 export const activitySchema=[
  ...socialSchema,
  ...boardSchema,
+ ...arcadeSchema,
  'CREATE TABLE IF NOT EXISTS class_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)',
  'CREATE TABLE IF NOT EXISTS polls(id TEXT PRIMARY KEY,title TEXT NOT NULL,options TEXT NOT NULL,is_open INTEGER NOT NULL DEFAULT 1,deleted INTEGER NOT NULL DEFAULT 0,date TEXT NOT NULL)',
  'CREATE TABLE IF NOT EXISTS votes(poll TEXT NOT NULL,owner TEXT NOT NULL,choice INTEGER NOT NULL,PRIMARY KEY(poll,owner))',
@@ -18,6 +20,7 @@ export function activityStore(query){
  return {
   ...socialStore(query),
   ...boardStore(query),
+  ...arcadeStore(query),
   setting,saveSetting,
   async fun(owner,day){
    const [polls,votes,mine,checkins,announcement,roster]=await Promise.all([

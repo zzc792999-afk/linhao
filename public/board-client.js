@@ -30,7 +30,7 @@
   }));
   if(!shown.length){const empty=el('div',undefined,'hub-empty');empty.append(el('span','⌁'),el('h3',items.length?'没有找到匹配的事项':'重要的事，都会在这里集合。'),el('p',items.length?'换个关键词、分类或显示范围再看看。':'管理员可以在后台发布通知、作业、活动和资料。先从右侧的学习入口或专注计时开始吧。'));$('#hub-list').append(empty)}
  }
- function refresh(force=false){if(loading){if(!force)return loading;if(!queued)queued=loading.catch(()=>{}).then(()=>{queued=null;return refresh(false)});return queued}
+ function refresh(force=false){if($('#class-tools')&&!$('#class-tools').open)return Promise.resolve();if(loading){if(!force)return loading;if(!queued)queued=loading.catch(()=>{}).then(()=>{queued=null;return refresh(false)});return queued}
   $('#hub-refresh').disabled=true;loading=(async()=>{try{const result=await call('/board');clockOffset=Date.parse(result.now)-Date.now();const signature=JSON.stringify(result.items)+Math.floor(now()/60000);items=result.items;if(signature!==lastSignature){render();lastSignature=signature}status('● 班级事务已同步 · '+items.length+' 条 · 活跃页面每 30 秒更新')}catch(e){status('连接暂未恢复，已有内容保留。可点「刷新」重试。');throw e}finally{$('#hub-refresh').disabled=false}})().finally(()=>loading=null);return loading;
  }
  function calendar(item){
@@ -44,6 +44,7 @@
  document.querySelectorAll('[data-hub-go]').forEach(a=>a.addEventListener('click',()=>{kind=a.dataset.hubGo;$('#hub-scope').value=kind==='task'?'pending':kind==='event'?'week':'current';$('#hub-search').value='';render()}));
  let searchTimer;$('#hub-search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,120)});$('#hub-scope').addEventListener('change',render);$('#hub-refresh').addEventListener('click',()=>refresh(true).catch(()=>{}));
  if(document.body.dataset.mode==='preview'){status('这是静态展示页，班级事务请在正式网站查看。');$('#hub-refresh').disabled=true;render()}else{window.addEventListener('class-synced',()=>refresh().catch(()=>{}));if(typeof classReady!=='undefined'&&classReady)refresh().catch(()=>{})}
+ function openTools(){if(['#class-hub','#class-board','#class-tools'].includes(location.hash)&&$('#class-tools'))$('#class-tools').open=true}openTools();window.addEventListener('hashchange',openTools);$('#class-tools')?.addEventListener('toggle',()=>{if($('#class-tools').open)refresh(true).catch(()=>{})});
  // Use a wall-clock deadline so background tab throttling cannot extend a timer.
  const timerKey='class2501-focus-v1';let timer={mode:'work',remaining:1500000,deadline:0},timerStorage=true;
  try{const saved=JSON.parse(localStorage.getItem(timerKey)||'null');if(saved&&['work','break'].includes(saved.mode)&&Number.isFinite(saved.remaining)&&saved.remaining>=0&&saved.remaining<=1500000&&Number.isFinite(saved.deadline)&&saved.deadline>=0&&saved.deadline<=Date.now()+1500000)timer=saved}catch{timerStorage=false}

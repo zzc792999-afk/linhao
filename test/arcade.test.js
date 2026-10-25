@@ -1,0 +1,56 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {randomBytes} from 'node:crypto';
+import {PGlite} from '@electric-sql/pglite';
+import {sqliteStore,postgresStore} from '../database.js';
+import {createApp} from '../server.js';
+import {hashPassword} from '../admin.js';
+const id=()=>randomBytes(16).toString('hex');
+const stroke=[{color:'#234b3a',width:7,points:[[0.2,0.3],[0.5,0.8]]}];
+
+for(const backend of ['sqlite','postgres'])test(backend+': arcade feeding, score retries, hidden drawing answers, guesses and moderation preserve existing data',async()=>{
+ const dir=await mkdtemp(path.join(tmpdir(),'class-arcade-')),engine=backend==='postgres'?new PGlite():null;
+ let query;
+ const pgQuery=async(sql,args)=>{const r=await engine.query(sql,args);return {...r,rowCount:r.affectedRows}};
+ const pool={query:pgQuery,connect:async()=>({query:pgQuery,release(){}}),end:async()=>{}};
+ const old=process.env.ADMIN_PASSWORD_HASH;process.env.ADMIN_PASSWORD_HASH=await hashPassword('arcade-test-password');let server,secondaryClose;
+ try{
+  const store=engine?await postgresStore(pool):sqliteStore(dir);
+  if(engine)query=pgQuery;
+  else{const {DatabaseSync}=await import('node:sqlite');const connection=new DatabaseSync(path.join(dir,'class.db'));query=async(sql,args=[])=>{const values=[];const text=sql.replace(/\$(\d+)/g,(_,n)=>{values.push(args[Number(n)-1]);return '?'});const stmt=connection.prepare(text);return /^SELECT/i.test(sql)?{rows:stmt.all(...values),rowCount:0}:{rows:[],rowCount:Number(stmt.run(...values).changes)}};secondaryClose=()=>connection.close()}
+  await store.add({id:'f'.repeat(32),owner:'legacy',name:'原同学',text:'原留言',date:new Date().toISOString()});await store.saveSetting('announcement','原公告');
+  server=await createApp(dir,store);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+  const client=()=>{const cookies=new Map();return async(route,method='GET',body,headers={})=>{const r=await fetch(base+'/api'+route,{method,headers:{'Content-Type':'application/json',Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});for(const raw of r.headers.getSetCookie()){const pair=raw.split(';')[0],at=pair.indexOf('=');cookies.set(pair.slice(0,at),pair.slice(at+1))}return {status:r.status,data:await r.json()}}};
+  const artist=client(),other=client(),solver=client(),admin=client();
+  let state=(await artist('/arcade')).data;assert.equal(state.pets.length,7);assert.equal(state.my.name,'路过的同学');assert.equal(state.my.mascot,'panda');assert.equal(state.my.bestReaction,null);
+  assert.equal((await artist('/arcade/profile','PUT',{name:'画家甲',mascot:'panda'})).status,200);assert.equal((await other('/arcade/profile','PUT',{name:'同学乙',mascot:'cat'})).status,200);
+  assert.equal((await artist('/arcade/profile','PUT',{name:' ',mascot:'panda'})).status,400);assert.equal((await artist('/arcade/feed','PUT',{mascot:'dragon'})).status,400);
+  const feeds=await Promise.all([artist('/arcade/feed','PUT',{mascot:'panda'}),artist('/arcade/feed','PUT',{mascot:'panda'})]);assert.ok(feeds.every(r=>r.status===200));state=(await artist('/arcade')).data;assert.equal(state.pets.find(p=>p.id==='panda').feeds,1);assert.equal(state.my.stickerCount,1);assert.equal((await other('/arcade')).data.pets.find(p=>p.id==='panda').fed,false);
+  await other('/arcade/feed','PUT',{mascot:'panda'});assert.equal((await artist('/arcade')).data.pets.find(p=>p.id==='panda').feeds,2);for(const pet of state.pets.filter(p=>p.id!=='panda'))await artist('/arcade/feed','PUT',{mascot:pet.id});assert.equal((await artist('/arcade')).data.my.stickerCount,7);
+  for(let i=0;i<8;i++)await store.arcadeFeed('2000-01-01','old-'+i,'panda');state=(await artist('/arcade')).data;assert.equal(state.pets.find(p=>p.id==='panda').level,2);assert.equal(state.pets.find(p=>p.id==='panda').progress,0);
+  const attempt={attemptId:id(),rounds:[400,200,300]};assert.equal((await artist('/arcade/reaction','POST',attempt)).status,200);assert.equal((await artist('/arcade/reaction','POST',attempt)).data.my.bestReaction,300);assert.equal((await other('/arcade/reaction','POST',attempt)).status,409);
+  assert.equal((await artist('/arcade/reaction','POST',{...attempt,rounds:[100,100,100]})).status,409);assert.equal((await artist('/arcade/reaction','POST',{attemptId:id(),rounds:[700,900,800]})).data.my.bestReaction,300);assert.equal((await artist('/arcade/reaction','POST',{attemptId:id(),rounds:[49,300,400]})).status,400);assert.equal((await artist('/arcade/reaction','POST',{attemptId:id(),rounds:[100,200]})).status,400);
+  state=(await artist('/arcade/profile','PUT',{name:'画家甲改',mascot:'owl'})).data;assert.equal(state.reactionLeaderboard[0].name,'画家甲改');assert.equal(state.reactionLeaderboard[0].mascot,'owl');assert.equal(state.reactionLeaderboard[0].score,300);assert.equal(state.reactionLeaderboard[0].mine,true);assert.equal(JSON.stringify(state.reactionLeaderboard).includes('owner'),false);
+  const ticket=(await artist('/arcade/words','POST',{})).data;assert.equal(ticket.words.length,3);assert.equal(new Set(ticket.words.map(w=>w.word)).size,3);const picked=ticket.words[0];const drawing={id:id(),ticket:ticket.ticket,wordId:picked.id,strokes:stroke};
+  assert.equal((await artist('/arcade/drawings','POST',{...drawing,strokes:[]})).status,400);assert.equal((await other('/arcade/drawings','POST',{...drawing,id:id()})).status,409);assert.equal((await artist('/arcade/drawings','POST',drawing)).status,201);assert.equal((await artist('/arcade/drawings','POST',drawing)).status,200);assert.equal((await artist('/arcade/drawings','POST',{...drawing,strokes:[{...stroke[0],width:5}]})).status,409);
+  let publicDrawing=(await other('/arcade/drawings/'+drawing.id)).data;assert.equal(publicDrawing.answer,null);assert.equal(publicDrawing.length,Array.from(picked.word).length);assert.equal(publicDrawing.mine,false);assert.equal(publicDrawing.solved,false);assert.deepEqual(publicDrawing.strokes,stroke);for(const forbidden of ['owner','fingerprint','ticket','wordId'])assert.equal(Object.hasOwn(publicDrawing,forbidden),false);
+  assert.equal((await artist('/arcade/drawings/'+drawing.id)).data.answer,picked.word);assert.equal((await other('/arcade')).data.drawings[0].answer,null);assert.equal((await artist('/arcade/drawings/'+drawing.id+'/guess','POST',{answer:picked.word})).status,409);
+  const wrong=await other('/arcade/drawings/'+drawing.id+'/guess','POST',{answer:'肯定不是这个答案'});assert.equal(wrong.status,200);assert.equal(wrong.data.correct,false);assert.equal(wrong.data.answer,null);assert.equal(wrong.data.remaining,19);assert.equal((await other('/arcade/drawings/'+drawing.id+'/guess','POST',{answer:picked.word})).status,429);
+  const correct=await solver('/arcade/drawings/'+drawing.id+'/guess','POST',{answer:' '+picked.word+' '});assert.equal(correct.status,200);assert.equal(correct.data.correct,true);assert.equal(correct.data.answer,picked.word);assert.equal(correct.data.solvedCount,1);assert.equal((await solver('/arcade/drawings/'+drawing.id+'/guess','POST',{answer:picked.word})).data.solvedCount,1);assert.equal((await solver('/arcade/drawings/'+drawing.id)).data.answer,picked.word);assert.equal((await other('/arcade/drawings/'+drawing.id)).data.answer,null);
+  await query('UPDATE class_arcade_guesses SET misses=20,last_try=0 WHERE drawing=$1 AND solved=0',[drawing.id]);assert.equal((await other('/arcade/drawings/'+drawing.id+'/guess','POST',{answer:picked.word})).status,429);
+  await query('UPDATE class_arcade_tickets SET expires_at=0');assert.equal((await artist('/arcade/drawings','POST',drawing)).status,200);assert.equal((await artist('/arcade/drawings','POST',{...drawing,id:id()})).status,409);
+  const reroll=(await artist('/arcade/words','POST',{})).data;assert.notEqual(reroll.ticket,ticket.ticket);assert.equal((await artist('/arcade/words','POST',{})).data.ticket===reroll.ticket,false);
+  assert.equal((await other('/arcade/drawings/'+drawing.id,'DELETE')).status,403);assert.equal((await other('/admin/arcade')).status,401);assert.equal((await other('/admin/arcade/drawings/'+drawing.id,'DELETE')).status,401);assert.equal((await artist('/arcade/feed','PUT',{mascot:'panda'},{Origin:'https://evil.example'})).status,403);
+  assert.equal((await admin('/admin/login','POST',{password:'arcade-test-password'})).status,200);const dashboard=(await admin('/admin/arcade')).data;assert.equal(dashboard.drawings[0].answer,picked.word);assert.equal((await admin('/admin/arcade/drawings/'+drawing.id,'DELETE')).status,200);assert.equal((await other('/arcade/drawings/'+drawing.id)).status,404);assert.equal((await artist('/arcade/drawings','POST',drawing)).status,410);assert.equal((await store.arcadeRawDrawing(drawing.id)).strokes,'[]');
+  const scoreId=dashboard.scores.find(s=>s.name==='画家甲改').id;assert.equal((await admin('/admin/arcade/scores/'+scoreId,'DELETE')).status,200);assert.equal((await artist('/arcade')).data.my.bestReaction,null);assert.equal((await artist('/arcade/reaction','POST',attempt)).status,409);assert.equal((await artist('/arcade')).data.reactionLeaderboard.length,0);
+  await query('UPDATE class_arcade_attempts SET day=$1 WHERE revoked=1',['2000-01-01']);assert.equal((await artist('/arcade/reaction','POST',attempt)).status,409);assert.equal((await artist('/arcade/reaction','POST',{attemptId:id(),rounds:[200,210,220]})).data.my.bestReaction,210);
+  const capper=client();await capper('/arcade/profile','PUT',{name:'次数验证',mascot:'dog'});const capOwner=(await query('SELECT owner FROM class_arcade_profiles WHERE name=$1',['次数验证'])).rows[0].owner;
+  for(let i=0;i<29;i++)await query('INSERT INTO class_arcade_attempts(id,owner,rounds,score,day,date) VALUES($1,$2,$3,$4,$5,$6)',[id(),capOwner,'[300,400,500]',400,state.day,new Date().toISOString()]);
+  const staleId=id();await query('INSERT INTO class_arcade_attempts(id,owner,rounds,score,day,date) VALUES($1,$2,$3,$4,$5,$6)',[staleId,capOwner,'[300,400,500]',400,'2000-01-01',new Date().toISOString()]);assert.equal((await capper('/arcade/reaction','POST',{attemptId:id(),rounds:[300,400,500]})).status,200);assert.equal((await capper('/arcade/reaction','POST',{attemptId:id(),rounds:[300,400,500]})).status,429);assert.equal((await query('SELECT id FROM class_arcade_attempts WHERE id=$1',[staleId])).rows.length,0);
+  assert.equal((await store.notes('test'))[0].text,'原留言');assert.equal(await store.setting('announcement'),'原公告');if(engine)await postgresStore(pool);assert.equal((await other('/arcade')).data.drawings.length,0);
+  for(const route of ['/arcade.js','/arcade-database.js','/scripts/migrate-arcade.js'])assert.equal((await fetch(base+route)).status,404);await admin('/admin/logout','POST');assert.equal((await admin('/admin/arcade')).status,401);
+ }finally{if(old===undefined)delete process.env.ADMIN_PASSWORD_HASH;else process.env.ADMIN_PASSWORD_HASH=old;if(server?.listening)await new Promise(r=>{server.close(r);server.closeAllConnections()});secondaryClose?.();await engine?.close();await rm(dir,{recursive:true,force:true})}
+});

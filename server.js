@@ -1,5 +1,6 @@
 import {socialRoutes} from './social.js';
 import {boardRoutes} from './board.js';
+import {arcadeRoutes} from './arcade.js';
 import {adminRoutes,classDay} from './admin.js';
 import http from 'node:http';
 import sharp from 'sharp';
@@ -17,6 +18,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
   const manage=adminRoutes(db,req=>readJson(req,16384));
   const social=socialRoutes(db,req=>readJson(req,180000));
   const board=boardRoutes(db,req=>readJson(req,4096));
+  const arcade=arcadeRoutes(db,req=>readJson(req,180000));
   const rates = new Map();
   let processingPhotos=0;
   const server = http.createServer(async (req, res) => {
@@ -39,7 +41,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         const pathname = decodeURIComponent(url.pathname);
         const relative = pathname === '/' ? 'index.html' : ['/admin','/admin/'].includes(pathname) ? 'admin.html' : pathname.slice(1);
         // Only serve explicit public files, never the database or server source.
-        if (!['index.html','admin.html','admin-client.js','board-client.js','board-admin.js','board.css','social-client.js','social-admin.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
+        if (!['index.html','admin.html','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
         let content = readFileSync(path.join(publicRoot, relative));
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
@@ -80,6 +82,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       if(await manage(req,res,url,owner,send))return;
       if(await social(req,res,url,owner,send))return;
       if(await board(req,res,url,owner,send))return;
+      if(await arcade(req,res,url,owner,send))return;
       if(req.method==='GET'&&url.pathname==='/api/fun')return send(200,await db.fun(owner,classDay()));
       if(req.method==='PUT'&&url.pathname==='/api/checkin'){
         const body=await readJson(req);

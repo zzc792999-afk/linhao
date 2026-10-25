@@ -1,6 +1,7 @@
 import {randomBytes,createHash,scrypt as rawScrypt,timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
 import {boardInput} from './board.js';
+import {arcadeAdminRoutes} from './arcade.js';
 const scrypt=promisify(rawScrypt);
 const hash=s=>createHash('sha256').update(s).digest('hex');
 export async function hashPassword(password){const salt=randomBytes(16).toString('hex');return salt+':'+Buffer.from(await scrypt(password,salt,64)).toString('hex')}
@@ -10,6 +11,7 @@ async function verify(password,encoded){
 }
 export const classDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export function adminRoutes(db,readJson){
+ const arcadeAdmin=arcadeAdminRoutes(db);
  const attempts=new Map();let globalAttempts={start:Date.now(),count:0};
  const cookie=(res,value,maxAge)=>res.appendHeader('Set-Cookie',`class_admin=${value}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${process.env.NODE_ENV==='production'?'; Secure':''}`);
  return async(req,res,url,owner,send)=>{
@@ -31,6 +33,7 @@ export function adminRoutes(db,readJson){
    await db.audit(randomBytes(16).toString('hex'),'管理员登录','',new Date().toISOString());send(200,{ok:true});return true;
   }
   if(!authenticated){send(401,{error:'请先登录管理员后台'});return true}
+  if(await arcadeAdmin(req,res,url,owner,send))return true;
   const audit=async(action,target='')=>db.audit(randomBytes(16).toString('hex'),action,target,new Date().toISOString());
   if(url.pathname==='/api/admin/board'&&req.method==='GET'){send(200,{items:await db.board(owner,true)});return true}
   const boardTarget=/^\/api\/admin\/board\/([a-f0-9]{32})$/.exec(url.pathname);

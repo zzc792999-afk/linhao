@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" fill="none">
+ <title>小丑先生</title>
+ <desc>黑发、微笑、红鼻尖的班级同学卡通形象。</desc>
+ <circle cx="160" cy="160" r="153" fill="#F2F0E4"/>
+ <circle cx="160" cy="160" r="135" stroke="#D9DFCD" stroke-width="2" stroke-dasharray="4 10"/>
+ <path d="M66 272c8-43 41-66 94-66s86 23 94 66" fill="#335B48"/>
+ <path d="m127 217 33 24 33-24-16-12h-34l-16 12Z" fill="#FFFDF4"/>
+ <path d="M144 195h32v28c-10 11-22 11-32 0v-28Z" fill="#E9AD86"/>
+ <ellipse cx="102" cy="153" rx="13" ry="20" fill="#F3BF9A"/>
+ <ellipse cx="218" cy="153" rx="13" ry="20" fill="#F3BF9A"/>
+ <path d="M104 122c0-42 26-66 56-66s56 24 56 66v39c0 37-24 61-56 61s-56-24-56-61v-39Z" fill="#F8CBA7"/>
+ <path d="M101 137c-11-38-4-62 17-78 18-15 47-17 68-8 28-1 46 26 36 67l-8 27-8-38c-20 6-37-3-47-16-9 19-28 29-47 26l-7 28-4-8Z" fill="#303B33"/>
+ <path d="M120 81c15-15 31-19 48-15" stroke="#485348" stroke-width="6" stroke-linecap="round"/>
+ <path d="M123 142c7-4 13-4 20-1m34 0c7-3 13-3 20 1" stroke="#4F483E" stroke-width="4" stroke-linecap="round"/>
+ <ellipse cx="134" cy="156" rx="4" ry="5" fill="#343F35"/>
+ <ellipse cx="186" cy="156" rx="4" ry="5" fill="#343F35"/>
+ <ellipse cx="122" cy="177" rx="10" ry="5" fill="#ECB196"/>
+ <ellipse cx="198" cy="177" rx="10" ry="5" fill="#ECB196"/>
+ <path d="m159 157-3 15h8" stroke="#DDA381" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+ <ellipse cx="160" cy="173" rx="8" ry="6" fill="#D9635B"/>
+ <ellipse cx="158" cy="171" rx="2.5" ry="1.5" fill="#F29D90"/>
+ <path d="M144 190c9 9 23 9 32 0" stroke="#815044" stroke-width="3.5" stroke-linecap="round"/>
+ <path d="M160 241v37" stroke="#52725D" stroke-width="3"/>
+ <rect x="190" y="248" width="22" height="17" rx="4" fill="#F2F0E4"/>
+ <path d="m196 257 3 3 6-7" stroke="#52725D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="m250 76 3 9 9 3-9 3-3 9-3-9-9-3 9-3 3-9Z" fill="#A1B965"/>
+ <circle cx="71" cy="195" r="5" fill="#B7C78D"/>
+</svg>

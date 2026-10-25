@@ -46,4 +46,6 @@ public/ 是网站源码；docs/ 是 GitHub Pages 展示副本。
 项目已安装 neon、neon-postgres 技能（.agents/skills）和项目 OAuth MCP 配置（.codex/config.toml），服务地址固定到本项目，不包含 API key。
 .neon 为本机项目关联，由 .gitignore 排除；skills-lock.json 记录技能来源与校验信息。
 
-V4.1.1 新增第八位吉祥物“红鼻子小伙伴”🤡，支持投喂养成、每日贴纸和头像选择。
+V4.1.1 新增第八位吉祥物“小丑先生”👦，支持投喂养成、每日贴纸和头像选择。
+
+V4.1.2 小丑先生改为原创黑发、红鼻尖、微笑的人物卡通头像，统一用于展示卡片、投喂、贴纸、头像预览和趣味榜；沿用 rednose 标识，不重置已有成长和投喂记录。

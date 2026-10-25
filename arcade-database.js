@@ -1,7 +1,8 @@
 const defaultProfile={name:'路过的同学',mascot:'panda'};
 export const mascots=[
  {id:'pig',name:'猪',emoji:'🐷'},{id:'turtle',name:'甲鱼',emoji:'🐢'},{id:'chicken',name:'鸡',emoji:'🐔'},
- {id:'cat',name:'野猫',emoji:'🐈'},{id:'owl',name:'猫头鹰',emoji:'🦉'},{id:'dog',name:'狗',emoji:'🐶'},{id:'panda',name:'熊猫',emoji:'🐼'}
+ {id:'cat',name:'野猫',emoji:'🐈'},{id:'owl',name:'猫头鹰',emoji:'🦉'},{id:'dog',name:'狗',emoji:'🐶'},{id:'panda',name:'熊猫',emoji:'🐼'},
+ {id:'rednose',name:'红鼻子小伙伴',emoji:'🤡'}
 ];
 export const arcadeSchema=[
  'CREATE TABLE IF NOT EXISTS class_arcade_profiles(owner TEXT PRIMARY KEY,name TEXT NOT NULL,mascot TEXT NOT NULL)',

@@ -1,5 +1,6 @@
 import {randomBytes,createHash,scrypt as rawScrypt,timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
+import {boardInput} from './board.js';
 const scrypt=promisify(rawScrypt);
 const hash=s=>createHash('sha256').update(s).digest('hex');
 export async function hashPassword(password){const salt=randomBytes(16).toString('hex');return salt+':'+Buffer.from(await scrypt(password,salt,64)).toString('hex')}
@@ -31,6 +32,22 @@ export function adminRoutes(db,readJson){
   }
   if(!authenticated){send(401,{error:'请先登录管理员后台'});return true}
   const audit=async(action,target='')=>db.audit(randomBytes(16).toString('hex'),action,target,new Date().toISOString());
+  if(url.pathname==='/api/admin/board'&&req.method==='GET'){send(200,{items:await db.board(owner,true)});return true}
+  const boardTarget=/^\/api\/admin\/board\/([a-f0-9]{32})$/.exec(url.pathname);
+  if(url.pathname==='/api/admin/board'&&req.method==='POST'){
+   const body=await readJson(req),input=boardInput(body);if(typeof body.id!=='string'||! /^[a-f0-9]{32}$/.test(body.id)){send(400,{error:'发布编号无效，请刷新后台'});return true}
+   const existing=await db.boardItem(body.id);if(existing){const same=Object.entries(input).every(([key,value])=>key==='pinned'?!!existing[key]===value:existing[key]===value);send(same?200:409,same?{ok:true,id:body.id}:{error:'这份内容已经发布，请刷新后编辑'});return true}
+   if(!await db.createBoard({...input,id:body.id,updated_at:new Date().toISOString()})){const saved=await db.boardItem(body.id);if(saved&&Object.entries(input).every(([key,value])=>key==='pinned'?!!saved[key]===value:saved[key]===value)){send(200,{ok:true,id:body.id});return true}send(409,{error:'发布编号已使用或班务已达 300 条，请刷新列表后重试'});return true}
+   await audit('发布班级事务',body.id);send(201,{ok:true,id:body.id});return true;
+  }
+  if(boardTarget&&['PUT','PATCH'].includes(req.method)){
+   const body=await readJson(req),existing=await db.boardItem(boardTarget[1]);if(!existing){send(404,{error:'班务不存在'});return true}if(typeof body.version!=='string'||body.version!==existing.updated_at){send(409,{error:'内容已被更新，请先刷新列表，再重新编辑'});return true}
+   const now=new Date(Math.max(Date.now(),Date.parse(existing.updated_at)+1)).toISOString();let updated;
+   if(req.method==='PUT')updated=await db.updateBoard({...boardInput(body),id:existing.id,updated_at:now},body.version);
+   else{if(typeof body.archived!=='boolean'){send(400,{error:'归档状态无效'});return true}updated=await db.archiveBoard(existing.id,body.archived,body.version,now)}
+   if(!updated){send(409,{error:'内容刚被其他管理员更新，请刷新后再操作'});return true}await audit(req.method==='PUT'?'编辑班级事务':body.archived?'归档班级事务':'恢复班级事务',existing.id);send(200,{ok:true});return true;
+  }
+  if(boardTarget&&req.method==='DELETE'){await db.deleteBoard(boardTarget[1]);await audit('删除班级事务',boardTarget[1]);send(200,{ok:true});return true}
   if(url.pathname==='/api/admin/logout'&&req.method==='POST'){await db.deleteSession(hash(token));cookie(res,'',0);send(200,{ok:true});return true}
   if(url.pathname==='/api/admin/password'&&req.method==='PUT'){
    const body=await readJson(req);

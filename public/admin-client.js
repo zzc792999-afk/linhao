@@ -17,14 +17,15 @@
   $('#prev-page').disabled=page===0;$('#next-page').disabled=(page+1)*50>=data.stats.notes;$('#page-label').textContent=`第 ${page+1} 页 · 共 ${data.stats.notes} 条`;
   $('#manage-photos').replaceChildren(...data.photos.map(p=>{const item=el('article',undefined,'shared-photo');const link=el('a');link.href='/api/photos/'+p.id;link.target='_blank';link.rel='noopener';const img=el('img');img.src=link.href;img.alt=p.name;img.loading='lazy';link.append(img);item.append(link,el('p',p.name,'small-note'),action('删除照片',async()=>{if(!confirm('确定删除这张照片？'))return;await request('/photos/'+p.id,'DELETE');await load()}));return item}));
   window.renderSocialAdmin(data,request,load,notice);
+  window.dispatchEvent(new Event('class-admin-ready'));
   $('#manage-audit').replaceChildren(...data.audit.map(a=>el('p',date(a.date)+' · '+a.action,'small-note')));notice('已登录 · 内容已更新');
  }finally{busy=false}}
  async function submit(event,task){event.preventDefault();const button=event.submitter;button.disabled=true;try{await task()}catch(e){notice(e.message)}finally{button.disabled=false}}
  $('#admin-login').addEventListener('submit',e=>submit(e,async()=>{await request('/login','POST',{password:$('#admin-password').value});$('#admin-password').value='';await load()}));
- $('#logout').addEventListener('click',async()=>{try{await request('/logout','POST');showLogin();notice('已安全退出')}catch(e){notice(e.message)}});
+ $('#logout').addEventListener('click',async()=>{try{await request('/logout','POST');window.dispatchEvent(new Event('class-admin-logout'));showLogin();notice('已安全退出')}catch(e){notice(e.message)}});
  $('#settings-form').addEventListener('submit',e=>submit(e,async()=>{await request('/settings','PUT',{announcement:$('#announcement').value,roster:$('#roster').value});notice('公告与点名名单已保存')}));
  $('#poll-form').addEventListener('submit',e=>submit(e,async()=>{await request('/polls','POST',{title:$('#poll-title').value,options:$('#poll-options').value.split('\n').map(s=>s.trim()).filter(Boolean)});$('#poll-form').reset();await load()}));
- $('#password-form').addEventListener('submit',e=>submit(e,async()=>{await request('/password','PUT',{currentPassword:$('#old-password').value,password:$('#new-password').value});$('#password-form').reset();showLogin();notice('密码已修改，所有旧会话已失效，请使用新密码登录')}));
+ $('#password-form').addEventListener('submit',e=>submit(e,async()=>{await request('/password','PUT',{currentPassword:$('#old-password').value,password:$('#new-password').value});$('#password-form').reset();window.dispatchEvent(new Event('class-admin-logout'));showLogin();notice('密码已修改，所有旧会话已失效，请使用新密码登录')}));
  $('#refresh-admin').addEventListener('click',()=>load().catch(e=>notice(e.message)));
  $('#prev-page').addEventListener('click',()=>{page=Math.max(0,page-1);load().catch(e=>notice(e.message))});$('#next-page').addEventListener('click',()=>{page++;load().catch(e=>notice(e.message))});
  request('/session').then(s=>s.authenticated?load():(showLogin(),notice(s.configured?'请输入管理员密码':'管理密码尚未配置，请联系网站维护者'))).catch(e=>notice(e.message));

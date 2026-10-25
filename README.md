@@ -29,6 +29,12 @@ npm run db:check 验证真实数据库，并自动清理测试数据。
 
 public/ 是网站源码；docs/ 是 GitHub Pages 展示副本。
 
+## V4 班级事务台
+
+正式站首页新增通知、作业待办、活动日程和学习资料，支持搜索、七天事项筛选、个人完成标记及活动日历导出；旁边提供编程学习入口和可恢复的专注计时器。
+班务由原 `/admin` 后台统一发布、编辑、置顶和归档，不需要新账号或付费服务。作业勾选按浏览器保存，只做个人自查。
+首次部署前执行 `npm run db:migrate-desk`；详细保存规则和测试范围见 README-DATABASE.md 的 V4.0 章节。
+
 ## Neon 开发工具
 
 项目已安装 neon、neon-postgres 技能（.agents/skills）和项目 OAuth MCP 配置（.codex/config.toml），服务地址固定到本项目，不包含 API key。

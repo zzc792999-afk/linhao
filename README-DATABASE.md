@@ -108,7 +108,7 @@ Claimable Neon 项目必须在过期前领取；领取后旧数据库密码会�
 
 ## 定时连通性检查
 
-`GET /ping` 返回 HTTP 200，纯文本正文 `ok`；支持 HEAD，且不连接数据库。cron-job.org 的目标网址可填写 https://class-25-computer-1-live.onrender.com/ping ，请求方式选择 GET。原有 `/healthz` 保留。
+`GET /ping` 返回 HTTP 200，纯文本正文 `ok`；支持 HEAD，且不连接数据库。cron-job.org 的目标网址可填写 https://class-25-computer-1-live-xqvh.onrender.com/ping ，请求方式选择 GET。原有 `/healthz` 保留。
 
 ## V4.0 班级事务台
 
@@ -138,3 +138,24 @@ Claimable Neon 项目必须在过期前领取；领取后旧数据库密码会�
 V4.1.1 添加吉祥物 rednose（小丑先生 👦），沿用现有投喂唯一键、成长统计和个人头像保存。无需数据库迁移，旧吉祥物成长与用户头像保留。
 
 V4.1.2 小丑先生改为原创黑发、红鼻尖、微笑的人物卡通头像，统一用于展示卡片、投喂、贴纸、头像预览和趣味榜；沿用 rednose 标识，不重置已有成长和投喂记录。
+
+## V4.2 网站滚动墙、老师匿名评价基地与趣味解压靶场
+
+- **吉祥物新增与进阶形态演化**：
+  - 新增吉祥物：河马 (`hippo`)、马 (`horse`)、驴猫 (`donkeycat`)、胡巴 (`wuba`)、三角形 (`triangle`)，总计 13 位小伙伴。
+  - 演化机制：`feeds / 10` 自动映射对应形态。例如胡巴初阶为「小萝卜」🌱，满 10 票升级为「萝卜头」🥕，满 20 票升级为「萌妖胡巴」👶，满 30 票升级为「妖界至尊胡巴」👑。
+  - 核心标识 `id` 保持不变，已有投喂记录与贴纸数据无损保留。
+- **网站滚动墙 (Marquee)**：
+  - 新增 `class_marquee` 表，管理员在 `/admin` 发布滚动广播，首页实时平滑跑马灯展示，鼠标悬浮或触摸即停。
+- **老师匿名评价基地 (Teachers Base)**：
+  - 新增 `class_teachers` 与 `class_teacher_reviews` 表。
+  - 管理员设立老师信息；同学端可匿名评分（1–5 星）、选择印象标签并撰写评价（最多 500 字）。
+  - 普通同学通过安全 Cookie 权属验证只能删除自己发布的评价；管理员后台支持全量审核与违规删除。
+- **趣味解压靶场 (Targets Arena)**：
+  - 新增 `class_targets` 与 `class_target_splats` 表。
+  - 上传靶子图片经由 Sharp 安全优化为 WebP/JPEG 格式并存储于数据库 `BYTEA`（兼容 SQLite 与 PostgreSQL），最多保留 40 张靶子图片，每人上限 5 张。
+  - 投掷道具包括鸡蛋 🥚、拖鞋 🩴、烂番茄 🍅、蔬菜 🥦、板砖 🧱、鲜花 💐，基于归一化 `(x, y)` 坐标精准落点，前端渲染真实物理弹道与留痕标记，实时汇总命中统计。
+  - 上传者仅可删除自己上传的靶子图片，管理员在后台可一键下架清理。
+- **数据库迁移**：
+  - 迁移脚本：`scripts/migrate-campus.js`，运行命令：`npm run db:migrate-campus`。
+  - 严格保持幂等性（`CREATE TABLE IF NOT EXISTS`），不重置、不覆盖现有数据库内容。

@@ -1,6 +1,7 @@
 import {socialRoutes} from './social.js';
 import {boardRoutes} from './board.js';
 import {arcadeRoutes} from './arcade.js';
+import {campusRoutes} from './campus.js';
 import {adminRoutes,classDay} from './admin.js';
 import http from 'node:http';
 import sharp from 'sharp';
@@ -13,19 +14,21 @@ import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 const publicRoot = path.join(root, 'public');
 const hash = value => createHash('sha256').update(value).digest('hex');
+
 export async function createApp(dataDir = process.env.DATA_DIR || path.join(root, 'data'), injectedStore) {
   const db = injectedStore || await openStore({directory:dataDir,databaseUrl:process.env.DATABASE_URL,render:!!process.env.RENDER});
   const manage=adminRoutes(db,req=>readJson(req,16384));
   const social=socialRoutes(db,req=>readJson(req,180000));
   const board=boardRoutes(db,req=>readJson(req,4096));
   const arcade=arcadeRoutes(db,req=>readJson(req,180000));
+  const campus=campusRoutes(db,req=>readJson(req,180000));
   const rates = new Map();
   let processingPhotos=0;
   const server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'same-origin');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' blob:; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     const send = (status, body) => { res.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}); res.end(JSON.stringify(body)); };
     try {
       const url = new URL(req.url, 'http://localhost');
@@ -41,7 +44,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         const pathname = decodeURIComponent(url.pathname);
         const relative = pathname === '/' ? 'index.html' : ['/admin','/admin/'].includes(pathname) ? 'admin.html' : pathname.slice(1);
         // Only serve explicit public files, never the database or server source.
-        if (!['index.html','admin.html','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/rednose-classmate.svg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
+        if (!['index.html','admin.html','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/rednose-classmate.svg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
         let content = readFileSync(path.join(publicRoot, relative));
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
@@ -83,6 +86,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       if(await social(req,res,url,owner,send))return;
       if(await board(req,res,url,owner,send))return;
       if(await arcade(req,res,url,owner,send))return;
+      if(await campus(req,res,url,owner,send))return;
       if(req.method==='GET'&&url.pathname==='/api/fun')return send(200,await db.fun(owner,classDay()));
       if(req.method==='PUT'&&url.pathname==='/api/checkin'){
         const body=await readJson(req);
@@ -171,7 +175,6 @@ async function readJson(req,limit=4096){
   try{const body=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!body||Array.isArray(body)||typeof body!=='object')throw Error();return body}catch{throw Object.assign(new Error('请求格式无效'),{status:400})}
 }
 if(process.argv[1] && path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-
   const server=await createApp();server.listen(Number(process.env.PORT)||3000,'0.0.0.0',()=>console.log(`班级网站已启动：http://localhost:${server.address().port}`));
   for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>server.close(()=>process.exit(0)));
 }

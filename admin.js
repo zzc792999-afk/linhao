@@ -2,6 +2,8 @@ import {randomBytes,createHash,scrypt as rawScrypt,timingSafeEqual} from 'node:c
 import {promisify} from 'node:util';
 import {boardInput} from './board.js';
 import {arcadeAdminRoutes} from './arcade.js';
+import {campusAdminRoutes} from './campus.js';
+
 const scrypt=promisify(rawScrypt);
 const hash=s=>createHash('sha256').update(s).digest('hex');
 export async function hashPassword(password){const salt=randomBytes(16).toString('hex');return salt+':'+Buffer.from(await scrypt(password,salt,64)).toString('hex')}
@@ -10,10 +12,13 @@ async function verify(password,encoded){
  const [salt,value]=encoded.split(':');const actual=await scrypt(password,salt,64);return timingSafeEqual(actual,Buffer.from(value,'hex'));
 }
 export const classDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+
 export function adminRoutes(db,readJson){
  const arcadeAdmin=arcadeAdminRoutes(db);
+ const campusAdmin=campusAdminRoutes(db,readJson);
  const attempts=new Map();let globalAttempts={start:Date.now(),count:0};
  const cookie=(res,value,maxAge)=>res.appendHeader('Set-Cookie',`class_admin=${value}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${process.env.NODE_ENV==='production'?'; Secure':''}`);
+
  return async(req,res,url,owner,send)=>{
   if(!url.pathname.startsWith('/api/admin/'))return false;
   const current=await db.setting('admin_password_hash',process.env.ADMIN_PASSWORD_HASH||'');
@@ -34,6 +39,7 @@ export function adminRoutes(db,readJson){
   }
   if(!authenticated){send(401,{error:'请先登录管理员后台'});return true}
   if(await arcadeAdmin(req,res,url,owner,send))return true;
+  if(await campusAdmin(req,res,url,owner,send))return true;
   const audit=async(action,target='')=>db.audit(randomBytes(16).toString('hex'),action,target,new Date().toISOString());
   if(url.pathname==='/api/admin/board'&&req.method==='GET'){send(200,{items:await db.board(owner,true)});return true}
   const boardTarget=/^\/api\/admin\/board\/([a-f0-9]{32})$/.exec(url.pathname);
@@ -60,7 +66,18 @@ export function adminRoutes(db,readJson){
   }
   if(url.pathname==='/api/admin/dashboard'&&req.method==='GET'){
    const page=Math.min(100000,Math.max(0,Number.parseInt(url.searchParams.get('page')||'0',10)||0));
-   send(200,{...await db.dashboard(page),fun:await db.fun(owner,classDay()),extended:await db.extended(owner,new Date().toISOString(),true),challengeEntries:await db.challengeEntries()});return true;
+   const [dash, fun, ext, chEntries, marquee, teachers, reviews, targets] = await Promise.all([
+     db.dashboard(page),
+     db.fun(owner,classDay()),
+     db.extended(owner,new Date().toISOString(),true),
+     db.challengeEntries(),
+     db.marqueeMessages(),
+     db.teachers(),
+     db.adminAllTeacherReviews(),
+     db.targets('')
+   ]);
+   send(200,{...dash,fun,extended:ext,challengeEntries:chEntries,campus:{marquee,teachers,reviews,targets}});
+   return true;
   }
   if(url.pathname==='/api/admin/settings'&&req.method==='PUT'){
    const body=await readJson(req);

@@ -1,6 +1,6 @@
 {
   "name": "class-25-computer-1",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,7 +11,8 @@
     "test": "node --test",
     "db:check": "node --env-file-if-exists=.env scripts/check-database.js",
     "db:migrate-desk": "node --env-file-if-exists=.env scripts/migrate-class-desk.js",
-    "db:migrate-arcade": "node --env-file-if-exists=.env scripts/migrate-arcade.js"
+    "db:migrate-arcade": "node --env-file-if-exists=.env scripts/migrate-arcade.js",
+    "db:migrate-campus": "node --env-file-if-exists=.env scripts/migrate-campus.js"
   },
   "dependencies": {
     "pg": "^8.23.1",

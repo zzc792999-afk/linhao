@@ -1,0 +1,620 @@
+/* ==========================================================================
+   25计算机1 班级互动小站 · Campus Features (滚动墙 / 评教基地 / 解压靶场)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 网站滚动墙 (Dynamic Marquee Ticker)
+   -------------------------------------------------------------------------- */
+.campus-ticker-wrap {
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink, #172b24);
+  color: var(--bg, #faf8f2);
+  border-top: 1px solid var(--line, #e2ded4);
+  border-bottom: 1px solid var(--line, #e2ded4);
+  padding: 10px 0;
+  position: relative;
+  user-select: none;
+}
+
+.campus-ticker-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  animation: campusMarquee 35s linear infinite;
+  will-change: transform;
+}
+
+.campus-ticker-wrap:hover .campus-ticker-track,
+.campus-ticker-wrap:active .campus-ticker-track {
+  animation-play-state: paused;
+}
+
+.campus-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 28px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.campus-ticker-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  background: var(--lime, #92af4a);
+  color: var(--ink, #172b24);
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.campus-ticker-text {
+  font-weight: 500;
+}
+
+.campus-ticker-author {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.campus-ticker-sep {
+  color: var(--lime, #92af4a);
+  font-size: 14px;
+}
+
+@keyframes campusMarquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* --------------------------------------------------------------------------
+   2. 各老师匿名评价基地 (Teacher Anonymous Evaluation Base)
+   -------------------------------------------------------------------------- */
+.campus-section {
+  scroll-margin-top: 24px;
+}
+
+.teachers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.teacher-card {
+  border: 1px solid var(--line, #e2ded4);
+  border-radius: 12px;
+  background: var(--paper, #fffdf7);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.teacher-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(23, 43, 36, 0.06);
+}
+
+.teacher-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.teacher-avatar {
+  font-size: 38px;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  background: var(--bg, #faf8f2);
+  border: 1px solid var(--line, #e2ded4);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.teacher-info h3 {
+  font-size: 18px;
+  margin: 0 0 4px;
+  color: var(--ink, #172b24);
+}
+
+.teacher-subject {
+  font-size: 12px;
+  color: var(--muted, #687768);
+  margin: 0;
+}
+
+.teacher-rating-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.stars-display {
+  color: #e67e22;
+  letter-spacing: 2px;
+  font-size: 15px;
+}
+
+.teacher-score {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink, #172b24);
+}
+
+.teacher-review-count {
+  font-size: 11px;
+  color: var(--muted, #687768);
+}
+
+.teacher-tags-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+  flex-grow: 1;
+}
+
+.teacher-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  background: var(--bg, #faf8f2);
+  border: 1px solid var(--line, #e2ded4);
+  padding: 3px 8px;
+  border-radius: 12px;
+  color: var(--muted, #687768);
+}
+
+.teacher-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.teacher-actions .button {
+  flex: 1;
+  text-align: center;
+  justify-content: center;
+  font-size: 12px;
+  padding: 10px 14px;
+}
+
+/* 评教详情抽屉 / 列表 */
+.reviews-drawer {
+  margin-top: 24px;
+  border: 1px solid var(--line, #e2ded4);
+  border-radius: 12px;
+  background: var(--paper, #fffdf7);
+  padding: 24px;
+}
+
+.reviews-drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line, #e2ded4);
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+}
+
+.reviews-drawer-head h3 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.review-form-card {
+  background: var(--bg, #faf8f2);
+  border: 1px solid var(--line, #e2ded4);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 24px;
+}
+
+.star-picker {
+  display: flex;
+  gap: 6px;
+  font-size: 24px;
+  cursor: pointer;
+  margin: 6px 0 14px;
+}
+
+.star-picker span {
+  color: #ccc;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.star-picker span.active,
+.star-picker span:hover,
+.star-picker span:hover ~ span {
+  color: #e67e22;
+}
+
+.quick-tag-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 8px 0 14px;
+}
+
+.quick-tag-btn {
+  border: 1px solid var(--line, #e2ded4);
+  background: var(--paper, #fffdf7);
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-tag-btn.active {
+  background: var(--ink, #172b24);
+  color: var(--bg, #faf8f2);
+  border-color: var(--ink, #172b24);
+}
+
+.review-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.review-item {
+  border: 1px solid var(--line, #e2ded4);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--paper, #fffdf7);
+  position: relative;
+}
+
+.review-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.review-moniker {
+  font-weight: 700;
+  color: var(--ink, #172b24);
+}
+
+.review-tag-badge {
+  background: rgba(146, 175, 74, 0.16);
+  color: #557c35;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.review-comment {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink, #172b24);
+  margin: 6px 0;
+  white-space: pre-wrap;
+}
+
+.review-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted, #687768);
+  margin-top: 8px;
+}
+
+.review-delete-btn {
+  border: 0;
+  background: transparent;
+  color: #d9635b;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   3. 趣味扔物靶场 (Throwing Target Arena)
+   -------------------------------------------------------------------------- */
+.targets-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.targets-strip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.targets-gallery {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 6px 2px 14px;
+  scrollbar-width: thin;
+}
+
+.target-thumb-card {
+  flex: 0 0 140px;
+  border: 2px solid var(--line, #e2ded4);
+  border-radius: 10px;
+  background: var(--paper, #fffdf7);
+  padding: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.target-thumb-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--ink, #172b24);
+}
+
+.target-thumb-card.active {
+  border-color: var(--lime, #92af4a);
+  background: rgba(146, 175, 74, 0.08);
+  box-shadow: 0 4px 12px rgba(146, 175, 74, 0.25);
+}
+
+.target-thumb-img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--bg, #faf8f2);
+  display: block;
+}
+
+.target-thumb-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 6px 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.target-thumb-throws {
+  font-size: 10px;
+  color: var(--muted, #687768);
+}
+
+/* 靶场主互动台 */
+.arena-stage-wrap {
+  border: 2px dashed var(--line, #e2ded4);
+  border-radius: 16px;
+  background: var(--paper, #fffdf7);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.arena-stage-topbar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.arena-stage-title {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arena-target-box {
+  position: relative;
+  max-width: 100%;
+  width: fit-content;
+  user-select: none;
+  cursor: crosshair;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--line, #e2ded4);
+  background: #222;
+}
+
+.arena-target-image {
+  max-width: 100%;
+  max-height: 520px;
+  display: block;
+  pointer-events: auto;
+}
+
+/* 命中留痕 (Splats) */
+.splat-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 26px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+  animation: splatPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes splatPop {
+  0% { transform: translate(-50%, -50%) scale(0.2) rotate(-30deg); opacity: 0; }
+  60% { transform: translate(-50%, -50%) scale(1.3) rotate(15deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* 飞行弹道动画元素 */
+.flying-projectile {
+  position: fixed;
+  z-index: 9999;
+  font-size: 32px;
+  line-height: 1;
+  pointer-events: none;
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease;
+}
+
+/* 道具选择工具栏 */
+.throw-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 20px;
+  background: var(--bg, #faf8f2);
+  border: 1px solid var(--line, #e2ded4);
+  padding: 10px 16px;
+  border-radius: 30px;
+}
+
+.throw-item-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line, #e2ded4);
+  border-radius: 20px;
+  background: var(--paper, #fffdf7);
+  color: var(--ink, #172b24);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.throw-item-btn:hover {
+  transform: scale(1.05);
+  border-color: var(--ink, #172b24);
+}
+
+.throw-item-btn.active {
+  background: var(--ink, #172b24);
+  color: var(--bg, #faf8f2);
+  border-color: var(--ink, #172b24);
+  box-shadow: 0 3px 10px rgba(23, 43, 36, 0.2);
+}
+
+.throw-item-count {
+  font-size: 10px;
+  opacity: 0.75;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.throw-item-btn.active .throw-item-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 靶场上传对话框/表单 */
+.target-upload-form {
+  background: var(--bg, #faf8f2);
+  border: 1px dashed var(--line, #e2ded4);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   4. 深色模式支持
+   -------------------------------------------------------------------------- */
+.dark .campus-ticker-wrap {
+  background: #111e19;
+  border-color: #2b3e34;
+}
+
+.dark .teacher-card,
+.dark .reviews-drawer,
+.dark .review-item,
+.dark .arena-stage-wrap,
+.dark .target-thumb-card {
+  background: #1e3328;
+  border-color: #2e4d3c;
+}
+
+.dark .teacher-avatar {
+  background: #17271f;
+  border-color: #2e4d3c;
+}
+
+.dark .teacher-tag-chip {
+  background: #17271f;
+  border-color: #2e4d3c;
+  color: #a4bfae;
+}
+
+.dark .review-form-card,
+.dark .throw-toolbar,
+.dark .target-upload-form {
+  background: #17271f;
+  border-color: #2e4d3c;
+}
+
+.dark .quick-tag-btn,
+.dark .throw-item-btn {
+  background: #1e3328;
+  border-color: #2e4d3c;
+  color: #e5ede7;
+}
+
+.dark .quick-tag-btn.active,
+.dark .throw-item-btn.active {
+  background: #92af4a;
+  color: #172b24;
+  border-color: #92af4a;
+}
+
+.dark .review-tag-badge {
+  background: rgba(146, 175, 74, 0.25);
+  color: #c4e47d;
+}
+
+/* --------------------------------------------------------------------------
+   5. 响应式布局优化
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .teachers-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .teachers-grid {
+    grid-template-columns: 1fr;
+  }
+  .arena-stage-wrap {
+    padding: 16px 10px;
+  }
+  .arena-target-image {
+    max-height: 380px;
+  }
+  .throw-toolbar {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .throw-item-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}

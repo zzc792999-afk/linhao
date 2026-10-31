@@ -66,7 +66,7 @@ body.dark .sticky-category-bar {
   text-decoration: none;
   flex-shrink: 0;
   transition: all 0.18s ease;
-  user-select: none;
+  
 }
 
 .category-pill:hover {
@@ -142,7 +142,7 @@ body.dark .category-pill.active {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   min-width: 0;
-  user-select: none;
+  
 }
 
 .portal-card:hover {
@@ -256,7 +256,7 @@ body.dark .category-pill.active {
     color: var(--muted);
     position: relative;
     transition: color 0.15s ease;
-    user-select: none;
+    
   }
   .bottom-nav-item:active,
   .bottom-nav-item.active {
@@ -477,4 +477,16 @@ body.dark .back-to-top-btn {
     padding-bottom: 5px;
     margin-bottom: 6px;
   }
+}
+
+.portal-card,
+.category-pill,
+.bottom-nav-item {
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.portal-card *,
+.bottom-nav-item * {
+  pointer-events: none;
 }

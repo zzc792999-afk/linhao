@@ -110,7 +110,83 @@ if(preview){
   for(const event of ['pointerdown','keydown','scroll'])window.addEventListener(event,()=>{const paused=Date.now()-lastActivity>=120000;lastActivity=Date.now();if(paused)refresh()},{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){lastActivity=Date.now();refresh()}});
 }
-function openPublicSection(hash){const id={'#album':'album-fold','#messages':'messages-fold'}[hash];if(id)document.getElementById(id).open=true}
+function openPublicSection(hash){
+  if(!hash)return;
+  const rawId=hash.replace(/^#/,'');
+  const foldMap={'album':'album-fold','messages':'messages-fold','class-tools':'class-tools','class-hub':'class-tools','class-board':'class-tools'};
+  const targetFoldId=foldMap[rawId];
+  if(targetFoldId){
+    const f=document.getElementById(targetFoldId);
+    if(f)f.open=true;
+  }
+  const el=document.getElementById(rawId);
+  if(el){
+    const d=el.closest('details');
+    if(d)d.open=true;
+  }
+}
 openPublicSection(location.hash);
 window.addEventListener('hashchange',()=>openPublicSection(location.hash));
-document.addEventListener('click',event=>{const link=event.target.closest('a[href="#album"],a[href="#messages"]');if(link)openPublicSection(link.getAttribute('href'))});
+
+document.addEventListener('click',event=>{
+  const link=event.target.closest('a[href^="#"]');
+  if(!link)return;
+  const href=link.getAttribute('href');
+  if(!href||href==='#'||href==='#0')return;
+  openPublicSection(href);
+  const target=document.querySelector(href);
+  if(target){
+    event.preventDefault();
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+    if(history.replaceState)history.replaceState(null,'',href);
+  }
+});
+
+const backToTopBtn=document.getElementById('back-to-top-btn');
+if(backToTopBtn){
+  window.addEventListener('scroll',()=>{
+    if(window.scrollY>250)backToTopBtn.classList.add('visible');
+    else backToTopBtn.classList.remove('visible');
+  },{passive:true});
+  backToTopBtn.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+}
+
+(function initNavScrollSpy(){
+  const sectionIds=['home','mobile-portals','arcade','people','mascots','album','messages','class-film','playground','social-area','teachers','targets','class-tools'];
+  const sections=sectionIds.map(id=>document.getElementById(id)).filter(Boolean);
+  if(!sections.length||!('IntersectionObserver' in window))return;
+
+  const categoryPills=document.querySelectorAll('.category-pill[data-nav-target]');
+  const bottomNavItems=document.querySelectorAll('.bottom-nav-item[data-bottom-target]');
+
+  function updateActiveNav(activeId){
+    if(!activeId)return;
+    const targetKey=activeId==='mobile-portals'?'home':activeId;
+
+    categoryPills.forEach(pill=>{
+      const match=pill.dataset.navTarget===targetKey;
+      pill.classList.toggle('active',match);
+      if(match){
+        pill.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+      }
+    });
+
+    const bottomMap={'home':'home','mobile-portals':'home','arcade':'arcade','targets':'targets','teachers':'teachers','messages':'messages','album':'messages'};
+    const bottomKey=bottomMap[activeId]||'';
+    if(bottomKey){
+      bottomNavItems.forEach(item=>{
+        item.classList.toggle('active',item.dataset.bottomTarget===bottomKey);
+      });
+    }
+  }
+
+  const observer=new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        updateActiveNav(entry.target.id);
+      }
+    });
+  },{rootMargin:'-15% 0px -65% 0px',threshold:0});
+
+  sections.forEach(sec=>observer.observe(sec));
+})();

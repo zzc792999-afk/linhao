@@ -490,3 +490,18 @@ body.dark .back-to-top-btn {
 .bottom-nav-item * {
   pointer-events: none;
 }
+
+#toast {
+  z-index: 200;
+}
+
+#close-modal {
+  z-index: 10;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  #toast {
+    bottom: 76px;
+  }
+}

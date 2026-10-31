@@ -117,6 +117,15 @@ export const mascots=[
       {name:'百慕大魔幻三角',emoji:'🛕',motto:'神秘力场，吸走所有bug与烦恼。'},
       {name:'宇宙三棱镜',emoji:'🌈',motto:'折射无限光谱，折射璀璨未来！'}
     ]
+  },
+  {
+    id:'beetle',baseName:'屎壳郎',name:'屎壳郎',emoji:'🪲',
+    forms:[
+      {name:'小屎球推手',emoji:'🪲',motto:'勤劳推球，默默蓄力不言弃。'},
+      {name:'黄金圣甲虫',emoji:'🪞',motto:'金甲闪烁，低调奢华有内涵。'},
+      {name:'星空滚球兽',emoji:'🪐',motto:'推起星辰大海，宇宙皆为掌中球。'},
+      {name:'创世太阳圣甲虫',emoji:'☀️',motto:'推动初升骄阳，照亮25计1全班未来！'}
+    ]
   }
 ];
 

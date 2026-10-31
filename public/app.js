@@ -147,7 +147,7 @@ function navigateToHash(href) {
     window.updateActiveNav(targetId);
   }
 
-  requestAnimationFrame(() => {
+  const doScroll = () => {
     const navBar = document.getElementById('sticky-category-bar');
     const offset = navBar ? (navBar.offsetHeight + 10) : 55;
     const targetTop = target.getBoundingClientRect().top + window.scrollY - offset;
@@ -160,6 +160,10 @@ function navigateToHash(href) {
     if (history.replaceState) {
       history.replaceState(null, '', href);
     }
+  };
+
+  requestAnimationFrame(() => {
+    setTimeout(doScroll, 20);
   });
 }
 

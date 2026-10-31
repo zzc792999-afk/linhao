@@ -104,8 +104,18 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       const listNotes = () => db.notes(owner);
       const listLikes = () => db.likes(owner);
       if (req.method === 'GET' && url.pathname === '/api/state') {
-        const [notes,likes,photos]=await Promise.all([listNotes(),listLikes(),db.photos(owner)]);
-        return send(200,{notes,likes,photos});
+        const [notes,likes,photos,people]=await Promise.all([listNotes(),listLikes(),db.photos(owner),db.people()]);
+        return send(200,{notes,likes,photos,people});
+      }
+      if (req.method === 'GET' && url.pathname === '/api/people') {
+        return send(200,{people:await db.people()});
+      }
+      const peoplePhotoRoute=/^\/api\/people\/(p[123])\/photo$/.exec(url.pathname);
+      if(['GET','HEAD'].includes(req.method)&&peoplePhotoRoute){
+        const data=await db.peoplePhoto(peoplePhotoRoute[1]);
+        if(!data)return send(404,{error:'未设置自定义肖像照片'});
+        res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'public, max-age=3600','Content-Length':data.length});
+        return res.end(req.method==='HEAD'?undefined:data);
       }
       const photoRoute=/^\/api\/photos\/([a-f0-9]{32})$/.exec(url.pathname);
       if(['GET','HEAD'].includes(req.method)&&photoRoute){

@@ -18,7 +18,27 @@
  for(const id of ['arcade-profile-name','arcade-profile-mascot'])$('#'+id).addEventListener('input',()=>{profileDirty=true;renderProfileAvatar()});
  $('#arcade-save-profile').addEventListener('click',async()=>{const controls=['arcade-profile-name','arcade-profile-mascot','arcade-save-profile'].map(id=>$('#'+id));controls.forEach(n=>n.disabled=true);try{const name=$('#arcade-profile-name').value.trim();if(!name||name.length>16)throw Error('给自己起一个 1–16 字的游乐厅昵称吧。');const result=await api('/profile','PUT',{name,mascot:$('#arcade-profile-mascot').value});profileDirty=false;apply(result);notice('身份已保存，以后上榜和猜画就用这个昵称。')}catch(error){notice(error.message)}finally{controls.forEach(n=>n.disabled=false)}});
  function requireProfile(){if(!state)throw Error('游乐厅还没连上，请先点「同步新鲜事」。');if(profileDirty)throw Error('上方昵称或头像有修改，请先点「保存我的身份」。')}
- function isIntimateActive(){return !!(state?.intimate||localStorage.getItem('class2501_intimate')==='1')}
+ let intimateTimer=null;
+ function isIntimateActive(){
+  const until=Number(localStorage.getItem('class2501_intimate_until')||0);
+  return Date.now()<until;
+ }
+ function scheduleIntimateRevert(){
+  if(intimateTimer){clearTimeout(intimateTimer);intimateTimer=null}
+  const until=Number(localStorage.getItem('class2501_intimate_until')||0);
+  const remaining=until-Date.now();
+  if(remaining>0){
+   intimateTimer=setTimeout(()=>{
+    localStorage.removeItem('class2501_intimate_until');
+    renderPets();
+    updateHomepageMascots();
+  scheduleIntimateRevert();
+    notice('🐾 亲密时间已满一分钟，熊猫和野猫悄悄恢复日常状态啦~');
+   },remaining);
+  }else{
+   localStorage.removeItem('class2501_intimate_until');
+  }
+ }
  function updateHomepageMascots(){
   const active=isIntimateActive();
   const homePanda=document.querySelector('.mascot-card[data-mascot-jump="panda"]');
@@ -52,27 +72,27 @@
   if(pwd===null)return;
   const code=pwd.trim().toLowerCase();
   if(code==='xyg'){
-   const isCurrently=isIntimateActive();
-   try{
-    const res=await api('/intimacy','POST',{code:'xyg',toggle:isCurrently});
-    if(res.intimate){localStorage.setItem('class2501_intimate','1');if(state)state.intimate=true}
-    else{localStorage.removeItem('class2501_intimate');if(state)state.intimate=false}
-   }catch{
-    if(isCurrently){localStorage.removeItem('class2501_intimate');if(state)state.intimate=false}
-    else{localStorage.setItem('class2501_intimate','1');if(state)state.intimate=true}
+   if(isIntimateActive()){
+    localStorage.removeItem('class2501_intimate_until');
+    if(intimateTimer){clearTimeout(intimateTimer);intimateTimer=null}
+    renderPets();
+    updateHomepageMascots();
+  scheduleIntimateRevert();
+    notice('🐾 熊猫和野猫提前解除了亲密状态。');
+    return;
    }
-   const active=isIntimateActive();
+   try{await api('/intimacy','POST',{code:'xyg'})}catch{}
+   const expiresAt=Date.now()+60000;
+   localStorage.setItem('class2501_intimate_until',String(expiresAt));
+   scheduleIntimateRevert();
    renderPets();
    updateHomepageMascots();
-   if(active){
-    triggerIntimateShower();
-    notice('💖 亲密密码正确！熊猫和野猫开启亲密模式，两只小伙伴悄悄依偎在一起啦~ 🐾');
-    const pCard=document.querySelector('[data-arcade-pet="panda"]'),cCard=document.querySelector('[data-arcade-pet="cat"]');
-    pCard?.classList.add('pet-feed-pop');cCard?.classList.add('pet-feed-pop');
-    setTimeout(()=>{pCard?.classList.remove('pet-feed-pop');cCard?.classList.remove('pet-feed-pop')},900);
-   }else{
-    notice('🐾 熊猫和野猫暂时解除了亲密状态。');
-   }
+  scheduleIntimateRevert();
+   triggerIntimateShower();
+   notice('💖 亲密密码正确！本设备已开启一分钟限定亲密时光（两只小伙伴依偎在一起啦）~ 🐾');
+   const pCard=document.querySelector('[data-arcade-pet="panda"]'),cCard=document.querySelector('[data-arcade-pet="cat"]');
+   pCard?.classList.add('pet-feed-pop');cCard?.classList.add('pet-feed-pop');
+   setTimeout(()=>{pCard?.classList.remove('pet-feed-pop');cCard?.classList.remove('pet-feed-pop')},900);
   }else{
    alert('密码不对哦~');
   }

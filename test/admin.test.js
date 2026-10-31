@@ -7,6 +7,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {sqliteStore,postgresStore} from '../database.js';
 import {hashPassword,classDay} from '../admin.js';
 import {createApp} from '../server.js';
+const tinyPng=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==','base64');
 for(const backend of ['sqlite','postgres'])test(backend+': admin authorization, moderation, polls, daily checkins and password rotation',async()=>{
  const dir=await mkdtemp(path.join(tmpdir(),'class-admin-')),engine=backend==='postgres'?new PGlite():null;
  const query=async(sql,args)=>{const r=await engine.query(sql,args);return {...r,rowCount:r.affectedRows}};
@@ -14,7 +15,7 @@ for(const backend of ['sqlite','postgres'])test(backend+': admin authorization, 
  const old=process.env.ADMIN_PASSWORD_HASH;process.env.ADMIN_PASSWORD_HASH=await hashPassword('test-admin-password-123');let server;
  try{
   const store=engine?await postgresStore(pool):sqliteStore(dir);server=await createApp(dir,store);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
-  function client(){const cookies=new Map();return async(route,method='GET',body,headers={})=>{const r=await fetch(base+'/api'+route,{method,headers:{Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),'Content-Type':'application/json',...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});for(const line of r.headers.getSetCookie()){const pair=line.split(';')[0],i=pair.indexOf('=');cookies.set(pair.slice(0,i),pair.slice(i+1))}return {status:r.status,data:await r.json()}}}
+  function client(){const cookies=new Map();return async(route,method='GET',body,headers={})=>{const isBuf=Buffer.isBuffer(body);const r=await fetch(base+'/api'+route,{method,headers:{Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),...(body!==undefined&&!headers['Content-Type']&&!isBuf?{'Content-Type':'application/json'}:{}),...headers},...(body===undefined?{}:{body:isBuf?body:JSON.stringify(body)})});for(const line of r.headers.getSetCookie()){const pair=line.split(';')[0],i=pair.indexOf('=');cookies.set(pair.slice(0,i),pair.slice(i+1))}return {status:r.status,data:await r.json().catch(()=>({}))}}}
   const admin=client(),second=client(),visitor=client(),other=client();
   assert.equal((await visitor('/admin/session')).data.authenticated,false);
   for(const [url,method,body] of [['/admin/dashboard','GET'],['/admin/settings','PUT',{announcement:'hacked',roster:''}],['/admin/polls','POST',{title:'x',options:['a','b']}],['/admin/notes/'+'a'.repeat(32),'DELETE'],['/admin/photos/'+'a'.repeat(32),'DELETE'],['/admin/password','PUT',{password:'password-password'}]])assert.equal((await visitor(url,method,body)).status,401);
@@ -36,6 +37,22 @@ for(const backend of ['sqlite','postgres'])test(backend+': admin authorization, 
   assert.equal((await admin('/admin/notes/'+'b'.repeat(32),'DELETE')).status,200);assert.equal((await admin('/admin/photos/'+'a'.repeat(32),'DELETE')).status,200);
   const dash=(await admin('/admin/dashboard')).data;assert.equal(dash.stats.photos,0);assert.equal(dash.stats.notes,0);assert.ok(dash.audit.length>=3);assert.equal(JSON.stringify(dash).includes('admin_password_hash'),false);
   await admin('/admin/polls/'+poll,'DELETE');if(engine)await postgresStore(pool);assert.equal((await visitor('/fun')).data.polls.some(p=>p.id===poll),false);
+  assert.equal((await visitor('/people')).data.people.length,3);
+  assert.equal((await visitor('/admin/people/p2','PUT',{title:'新班花'})).status,401);
+  const p2Update=await admin('/admin/people/p2','PUT',{title:'班花 · 璀璨',tag:'CLASS QUEEN',badge:'✿ 璀璨班花',badgeClass:'',description:'全班最耀眼的存在。'});
+  assert.equal(p2Update.status,200);
+  assert.equal((await visitor('/people')).data.people.find(p=>p.id==='p2').title,'班花 · 璀璨');
+  const photoUpload=await admin('/admin/people/p2/photo','PUT',tinyPng,{'Content-Type':'image/png'});
+  assert.equal(photoUpload.status,200);
+  assert.equal((await visitor('/people')).data.people.find(p=>p.id==='p2').hasCustomImage,true);
+  assert.equal((await fetch(base+'/api/people/p2/photo')).status,200);
+  const photoReset=await admin('/admin/people/p2','PUT',{title:'班花 · 璀璨',tag:'CLASS QUEEN',badge:'✿ 璀璨班花',badgeClass:'',description:'全班最耀眼的存在。',resetImage:true});
+  assert.equal(photoReset.status,200);
+  assert.equal((await visitor('/people')).data.people.find(p=>p.id==='p2').hasCustomImage,false);
+  assert.equal((await fetch(base+'/api/people/p2/photo')).status,404);
+  const resetAll=await admin('/admin/people/p2/reset','POST');
+  assert.equal(resetAll.status,200);
+  assert.equal((await visitor('/people')).data.people.find(p=>p.id==='p2').title,'班花 · 人气担当');
   assert.equal((await admin('/admin/password','PUT',{currentPassword:'wrong',password:'new-password-1234'})).status,403);
   assert.equal((await admin('/admin/password','PUT',{currentPassword:'test-admin-password-123',password:'new-password-1234'})).status,200);
   assert.equal((await second('/admin/dashboard')).status,401);assert.equal((await admin('/admin/dashboard')).status,401);

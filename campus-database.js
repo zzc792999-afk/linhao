@@ -123,8 +123,11 @@ export function campusStore(query) {
     )).rowCount,
     deleteTarget: async (id, owner) => {
       const clause = owner === undefined ? '' : ' AND owner=$2';
-      await query('DELETE FROM class_target_splats WHERE target_id=$1', [id]);
-      return !!(await query(`DELETE FROM class_targets WHERE id=$1${clause}`, owner === undefined ? [id] : [id, owner])).rowCount;
+      const deleted = !!(await query(`DELETE FROM class_targets WHERE id=$1${clause}`, owner === undefined ? [id] : [id, owner])).rowCount;
+      if (deleted) {
+        await query('DELETE FROM class_target_splats WHERE target_id=$1', [id]);
+      }
+      return deleted;
     },
     throwAtTarget: async p => {
       const inserted = !!(await query(

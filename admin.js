@@ -1,5 +1,6 @@
 import {randomBytes,createHash,scrypt as rawScrypt,timingSafeEqual} from 'node:crypto';
 import {promisify} from 'node:util';
+import sharp from 'sharp';
 import {boardInput} from './board.js';
 import {arcadeAdminRoutes} from './arcade.js';
 import {campusAdminRoutes} from './campus.js';
@@ -66,7 +67,7 @@ export function adminRoutes(db,readJson){
   }
   if(url.pathname==='/api/admin/dashboard'&&req.method==='GET'){
    const page=Math.min(100000,Math.max(0,Number.parseInt(url.searchParams.get('page')||'0',10)||0));
-   const [dash, fun, ext, chEntries, marquee, teachers, reviews, targets] = await Promise.all([
+   const [dash, fun, ext, chEntries, marquee, teachers, reviews, targets, people] = await Promise.all([
      db.dashboard(page),
      db.fun(owner,classDay()),
      db.extended(owner,new Date().toISOString(),true),
@@ -74,9 +75,10 @@ export function adminRoutes(db,readJson){
      db.marqueeMessages(),
      db.teachers(),
      db.adminAllTeacherReviews(),
-     db.targets('')
+     db.targets(''),
+     db.people()
    ]);
-   send(200,{...dash,fun,extended:ext,challengeEntries:chEntries,campus:{marquee,teachers,reviews,targets}});
+   send(200,{...dash,fun,extended:ext,challengeEntries:chEntries,campus:{marquee,teachers,reviews,targets},people});
    return true;
   }
   if(url.pathname==='/api/admin/settings'&&req.method==='PUT'){
@@ -112,6 +114,65 @@ export function adminRoutes(db,readJson){
   if(target?.[1]==='polls'&&req.method==='PUT'){
    const body=await readJson(req);if(typeof body.open!=='boolean'){send(400,{error:'投票状态无效'});return true}
    await db.setPoll(target[2],body.open);await audit(body.open?'开放投票':'结束投票',target[2]);send(200,{ok:true});return true;
+  }
+  if(url.pathname==='/api/admin/people'&&req.method==='GET'){
+   send(200,{people:await db.people()});return true;
+  }
+  const personRoute=/^\/api\/admin\/people\/(p[123])$/.exec(url.pathname);
+  if(personRoute&&req.method==='PUT'){
+   const body=await readJson(req);
+   const id=personRoute[1];
+   if(typeof body.title!=='string'||!body.title.trim()||body.title.length>40||
+      typeof body.tag!=='string'||!body.tag.trim()||body.tag.length>30||
+      typeof body.description!=='string'||!body.description.trim()||body.description.length>200){
+    send(400,{error:'请填写完整信息：称号 1–40 字，标签 1–30 字，寄语 1–200 字'});return true;
+   }
+   if(body.badge!==undefined&&(typeof body.badge!=='string'||body.badge.length>20)){
+    send(400,{error:'特别徽章限 20 字以内'});return true;
+   }
+   if(body.resetImage){
+    await db.resetPersonPhoto(id,new Date().toISOString());
+   }
+   await db.updatePerson(id,{
+    title:body.title.trim(),
+    tag:body.tag.trim(),
+    badge:(body.badge||'').trim(),
+    badgeClass:(body.badgeClass||'').trim(),
+    description:body.description.trim(),
+    date:new Date().toISOString()
+   });
+   await audit('修改主页风采人物',id);
+   send(200,{ok:true,people:await db.people()});return true;
+  }
+  const personPhotoRoute=/^\/api\/admin\/people\/(p[123])\/photo$/.exec(url.pathname);
+  if(personPhotoRoute&&req.method==='PUT'){
+   const id=personPhotoRoute[1];
+   if(!/^image\/(jpeg|png|webp)$/i.test(req.headers['content-type']||'')){
+    send(415,{error:'请上传 JPG、PNG 或 WebP 格式图片'});return true;
+   }
+   const chunks=[];let size=0;
+   for await(const chunk of req){
+    size+=chunk.length;
+    if(size>8*1024*1024){send(413,{error:'图片过大，请上传小于 8MB 的图片'});return true;}
+    chunks.push(chunk);
+   }
+   let processed;
+   try{
+    const img=sharp(Buffer.concat(chunks),{limitInputPixels:40000000,animated:false});
+    processed=await img.rotate().resize({width:1200,height:1200,fit:'inside',withoutEnlargement:true}).jpeg({quality:80}).toBuffer();
+   }catch{
+    send(400,{error:'图片解析失败，请选择有效的 JPG、PNG 或 WebP 格式图片'});return true;
+   }
+   await db.updatePersonPhoto(id,processed,new Date().toISOString());
+   await audit('更换主页风采照片',id);
+   send(200,{ok:true,people:await db.people()});return true;
+  }
+  const personResetRoute=/^\/api\/admin\/people\/(p[123])\/reset$/.exec(url.pathname);
+  if(personResetRoute&&req.method==='POST'){
+   const id=personResetRoute[1];
+   await db.resetPerson(id,new Date().toISOString());
+   await audit('重置主页风采人物',id);
+   send(200,{ok:true,people:await db.people()});return true;
   }
   send(404,{error:'管理接口不存在'});return true;
  };

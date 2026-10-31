@@ -52,14 +52,7 @@ for(const backend of ['sqlite','postgres'])test(backend+': arcade feeding, score
   const staleId=id();await query('INSERT INTO class_arcade_attempts(id,owner,rounds,score,day,date) VALUES($1,$2,$3,$4,$5,$6)',[staleId,capOwner,'[300,400,500]',400,'2000-01-01',new Date().toISOString()]);assert.equal((await capper('/arcade/reaction','POST',{attemptId:id(),rounds:[300,400,500]})).status,200);assert.equal((await capper('/arcade/reaction','POST',{attemptId:id(),rounds:[300,400,500]})).status,429);assert.equal((await query('SELECT id FROM class_arcade_attempts WHERE id=$1',[staleId])).rows.length,0);
   assert.equal((await artist('/arcade/intimacy','POST',{code:'wrong'})).status,403);
   const initIntimate=await artist('/arcade/intimacy','POST',{code:'XYG'});
-  assert.equal(initIntimate.status,200);assert.equal(initIntimate.data.intimate,true);
-  let intimateState=(await artist('/arcade')).data;
-  assert.equal(intimateState.intimate,true);
-  assert.equal(intimateState.pets.find(p=>p.id==='panda').motto.includes('野猫'),true);
-  assert.equal(intimateState.pets.find(p=>p.id==='cat').motto.includes('熊猫'),true);
-  const toggleIntimate=await artist('/arcade/intimacy','POST',{code:'xyg',toggle:true});
-  assert.equal(toggleIntimate.status,200);assert.equal(toggleIntimate.data.intimate,false);
-  assert.equal((await artist('/arcade')).data.intimate,false);
+  assert.equal(initIntimate.status,200);assert.equal(initIntimate.data.intimate,true);assert.equal(initIntimate.data.duration,60);
   assert.equal((await store.notes('test'))[0].text,'原留言');assert.equal(await store.setting('announcement'),'原公告');if(engine)await postgresStore(pool);assert.equal((await other('/arcade')).data.drawings.length,0);
   for(const route of ['/arcade.js','/arcade-database.js','/scripts/migrate-arcade.js'])assert.equal((await fetch(base+route)).status,404);await admin('/admin/logout','POST');assert.equal((await admin('/admin/arcade')).status,401);
  }finally{if(old===undefined)delete process.env.ADMIN_PASSWORD_HASH;else process.env.ADMIN_PASSWORD_HASH=old;if(server?.listening)await new Promise(r=>{server.close(r);server.closeAllConnections()});secondaryClose?.();await engine?.close();await rm(dir,{recursive:true,force:true})}

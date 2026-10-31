@@ -13,7 +13,11 @@ export const activitySchema=[
  'CREATE TABLE IF NOT EXISTS checkins(day TEXT NOT NULL,owner TEXT NOT NULL,name TEXT NOT NULL,mood TEXT NOT NULL,date TEXT NOT NULL,PRIMARY KEY(day,owner))',
  'CREATE TABLE IF NOT EXISTS admin_sessions(token TEXT PRIMARY KEY,version TEXT NOT NULL,expires BIGINT NOT NULL)',
  'CREATE TABLE IF NOT EXISTS admin_audit(id TEXT PRIMARY KEY,action TEXT NOT NULL,target TEXT NOT NULL,date TEXT NOT NULL)',
- `INSERT INTO polls(id,title,options,is_open,deleted,date) VALUES('welcome','下次班级活动，你更想参加哪一个？','["一起打球","电影之夜","户外野餐","编程小游戏"]',1,0,'2026-10-24T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`
+ 'CREATE TABLE IF NOT EXISTS class_spotlights(id TEXT PRIMARY KEY, title TEXT NOT NULL, tag TEXT NOT NULL, badge TEXT NOT NULL, badge_class TEXT NOT NULL, description TEXT NOT NULL, has_custom_image INTEGER NOT NULL DEFAULT 0, data BYTEA, date TEXT NOT NULL)',
+ `INSERT INTO polls(id,title,options,is_open,deleted,date) VALUES('welcome','下次班级活动，你更想参加哪一个？','["一起打球","电影之夜","户外野餐","编程小游戏"]',1,0,'2026-10-24T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
+ `INSERT INTO class_spotlights(id, title, tag, badge, badge_class, description, has_custom_image, date) VALUES('p1', '同窗 01', 'CLASSMATE', '', '', '同一间教室，同一段青春。', 0, '2026-10-31T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
+ `INSERT INTO class_spotlights(id, title, tag, badge, badge_class, description, has_custom_image, date) VALUES('p2', '班花 · 人气担当', 'CLASS SPOTLIGHT', '✿ 班花', '', '属于我们班的特别称号。', 0, '2026-10-31T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
+ `INSERT INTO class_spotlights(id, title, tag, badge, badge_class, description, has_custom_image, date) VALUES('p3', '班草 · 风采担当', 'CLASS SPOTLIGHT', '✦ 班草', 'lime', '把青春的这一面，留在这里。', 0, '2026-10-31T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`
 ];
 export function activityStore(query){
  const rows=async(sql,args=[]) => (await query(sql,args)).rows;
@@ -54,6 +58,65 @@ export function activityStore(query){
    return {stats:Object.fromEntries(Object.entries(stats[0]).map(([k,v])=>[k,Number(v)])),notes,photos,audit,page};
   },
   adminDeleteNote:id=>query('DELETE FROM notes WHERE id=$1',[id]),
-  adminDeletePhoto:id=>query('DELETE FROM photos WHERE id=$1',[id])
+  adminDeletePhoto:id=>query('DELETE FROM photos WHERE id=$1',[id]),
+  people:async()=>{
+   const list=await rows('SELECT id,title,tag,badge,badge_class,description,has_custom_image,date FROM class_spotlights ORDER BY id ASC');
+   const defaults={
+    p1:{id:'p1',title:'同窗 01',tag:'CLASSMATE',badge:'',badgeClass:'',description:'同一间教室，同一段青春。',defaultSrc:'assets/p1.jpg'},
+    p2:{id:'p2',title:'班花 · 人气担当',tag:'CLASS SPOTLIGHT',badge:'✿ 班花',badgeClass:'',description:'属于我们班的特别称号。',defaultSrc:'assets/p2.jpg'},
+    p3:{id:'p3',title:'班草 · 风采担当',tag:'CLASS SPOTLIGHT',badge:'✦ 班草',badgeClass:'lime',description:'把青春的这一面，留在这里。',defaultSrc:'assets/p3.jpg'}
+   };
+   return ['p1','p2','p3'].map(id=>{
+    const row=list.find(r=>r.id===id);
+    const def=defaults[id];
+    if(!row)return {...def,hasCustomImage:false,imageUrl:def.defaultSrc,date:new Date().toISOString()};
+    const hasCustom=Number(row.has_custom_image)===1;
+    return {
+     id:row.id,
+     title:row.title||def.title,
+     tag:row.tag||def.tag,
+     badge:row.badge??def.badge,
+     badgeClass:row.badge_class??def.badgeClass,
+     description:row.description||def.description,
+     hasCustomImage:hasCustom,
+     imageUrl:hasCustom?`/api/people/${row.id}/photo?v=${encodeURIComponent(row.date)}`:def.defaultSrc,
+     date:row.date
+    };
+   });
+  },
+  peoplePhoto:async id=>{
+   const row=(await rows('SELECT data,has_custom_image FROM class_spotlights WHERE id=$1',[id]))[0];
+   return (row&&Number(row.has_custom_image)===1&&row.data)?Buffer.from(row.data):null;
+  },
+  updatePerson:async(id,p)=>{
+   return !!(await query(
+    'UPDATE class_spotlights SET title=$1,tag=$2,badge=$3,badge_class=$4,description=$5,date=$6 WHERE id=$7',
+    [p.title,p.tag,p.badge,p.badgeClass,p.description,p.date,id]
+   )).rowCount;
+  },
+  updatePersonPhoto:async(id,data,date)=>{
+   return !!(await query(
+    'UPDATE class_spotlights SET data=$1,has_custom_image=1,date=$2 WHERE id=$3',
+    [data,date,id]
+   )).rowCount;
+  },
+  resetPersonPhoto:async(id,date)=>{
+   return !!(await query(
+    'UPDATE class_spotlights SET data=NULL,has_custom_image=0,date=$1 WHERE id=$2',
+    [date,id]
+   )).rowCount;
+  },
+  resetPerson:async(id,date)=>{
+   const def={
+    p1:{title:'同窗 01',tag:'CLASSMATE',badge:'',badgeClass:'',description:'同一间教室，同一段青春。'},
+    p2:{title:'班花 · 人气担当',tag:'CLASS SPOTLIGHT',badge:'✿ 班花',badgeClass:'',description:'属于我们班的特别称号。'},
+    p3:{title:'班草 · 风采担当',tag:'CLASS SPOTLIGHT',badge:'✦ 班草',badgeClass:'lime',description:'把青春的这一面，留在这里。'}
+   }[id];
+   if(!def)return false;
+   return !!(await query(
+    'UPDATE class_spotlights SET title=$1,tag=$2,badge=$3,badge_class=$4,description=$5,has_custom_image=0,data=NULL,date=$6 WHERE id=$7',
+    [def.title,def.tag,def.badge,def.badgeClass,def.description,date,id]
+   )).rowCount;
+  }
  };
 }

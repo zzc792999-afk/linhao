@@ -13,6 +13,42 @@ async function api(path, options={}){
 function errorMessage(error){return error.name==='TimeoutError'?'连接超时，请稍后重试':error instanceof TypeError?'连接失败，请检查网络后重试':error.message}
 let likes=preview?storage.get('preview-likes',{}):{};
 function renderLikes(){document.querySelectorAll('.like').forEach(button=>{const state=likes[button.dataset.person]||{count:0,liked:false};button.classList.toggle('active',state.liked);button.setAttribute('aria-pressed',String(state.liked));button.textContent=(state.liked?'♥ ':'♡ ')+state.count})}
+function renderPeople(list){
+  if(!Array.isArray(list)||!list.length)return;
+  for(const p of list){
+    const card=document.querySelector(`.person:has([data-person="${p.id}"])`)||document.querySelector(`.person [data-person="${p.id}"]`)?.closest('.person');
+    if(!card)continue;
+    const photoBtn=card.querySelector('.photo.open-photo');
+    const img=card.querySelector('.photo img');
+    const tag=card.querySelector('.person-meta .tag');
+    const h3=card.querySelector('.person-meta h3');
+    const desc=card.querySelector('.person-meta p');
+    if(photoBtn){
+      photoBtn.dataset.src=p.imageUrl||'assets/'+p.id+'.jpg';
+      photoBtn.dataset.title=p.title||'';
+      photoBtn.setAttribute('aria-label','查看'+(p.title||'同学')+'的照片');
+    }
+    if(img){
+      img.src=p.imageUrl||'assets/'+p.id+'.jpg';
+      img.alt=(p.title||'')+'的肖像';
+    }
+    if(tag)tag.textContent=p.tag||'CLASS SPOTLIGHT';
+    if(h3)h3.textContent=p.title||'';
+    if(desc)desc.textContent=p.description||'';
+    let badgeSpan=card.querySelector('.photo-badge');
+    if(p.badge&&p.badge.trim()){
+      if(!badgeSpan){
+        badgeSpan=document.createElement('span');
+        photoBtn?.append(badgeSpan);
+      }
+      badgeSpan.className='photo-badge'+(p.badgeClass?' '+p.badgeClass:'');
+      badgeSpan.textContent=p.badge.trim();
+    }else if(badgeSpan){
+      badgeSpan.remove();
+    }
+  }
+  renderLikes();
+}
 document.querySelectorAll('.like').forEach(button=>{button.disabled=!preview;button.addEventListener('click',async()=>{if(preview){const person=button.dataset.person;const liked=!likes[person]?.liked;likes[person]={liked,count:liked?1:0};storage.set('preview-likes',likes);renderLikes();toast('点赞已记在这台设备上');return}button.disabled=true;try{const data=await api('/likes/'+button.dataset.person,{method:'PUT',body:JSON.stringify({liked:!likes[button.dataset.person]?.liked})});likes=data.likes;renderLikes()}catch(error){toast(errorMessage(error))}finally{button.disabled=false}})});
 document.addEventListener('click',event=>{const button=event.target.closest('.open-photo');if(!button)return;$('#modal-img').src=button.dataset.src;$('#modal-img').alt=button.dataset.title;$('#modal-title').textContent=button.dataset.title;$('#lightbox').showModal()});
 $('#close-modal').addEventListener('click',()=>$('#lightbox').close());
@@ -57,7 +93,7 @@ const status=document.createElement('div');status.className='sync-status';status
 let refreshing=false;
 let classReady=false;
 let lastActivity=Date.now();
-async function refresh(){if(refreshing||document.hidden)return;refreshing=true;status.textContent='正在同步班级留言…';try{const data=await api('/state');notes=data.notes;likes=data.likes;photos=data.photos||[];renderNotes();renderLikes();renderPhotos();albumStatus.textContent=`共享相册 · 已上传 ${photos.length} 张 · 每 30 秒同步`;document.querySelectorAll('.like').forEach(button=>button.disabled=false);status.textContent='● 已连接 · 每 30 秒同步 · 展示最新 200 条留言';status.classList.remove('offline');classReady=true;window.dispatchEvent(new Event('class-synced'))}catch(error){status.replaceChildren(document.createTextNode('连接失败，留言暂未同步。'));status.classList.add('offline');const retry=document.createElement('button');retry.textContent='重新连接';retry.addEventListener('click',refresh);status.append(retry)}finally{refreshing=false}}
+async function refresh(){if(refreshing||document.hidden)return;refreshing=true;status.textContent='正在同步班级留言…';try{const data=await api('/state');notes=data.notes;likes=data.likes;photos=data.photos||[];renderNotes();renderLikes();renderPhotos();if(data.people)renderPeople(data.people);albumStatus.textContent=`共享相册 · 已上传 ${photos.length} 张 · 每 30 秒同步`;document.querySelectorAll('.like').forEach(button=>button.disabled=false);status.textContent='● 已连接 · 每 30 秒同步 · 展示最新 200 条留言';status.classList.remove('offline');classReady=true;window.dispatchEvent(new Event('class-synced'))}catch(error){status.replaceChildren(document.createTextNode('连接失败，留言暂未同步。'));status.classList.add('offline');const retry=document.createElement('button');retry.textContent='重新连接';retry.addEventListener('click',refresh);status.append(retry)}finally{refreshing=false}}
 if(preview){
   $('#upload').disabled=true;albumStatus.textContent='当前为静态展示版，请打开班级网站正式网址上传共享照片。';
   renderLikes();

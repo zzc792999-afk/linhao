@@ -20,6 +20,15 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
   const b=await readJson(req);if(!mascotOk(b.mascot)){send(400,{error:'这位吉祥物还没有加入班级'});return true}
   await db.arcadeFeed(day,owner,b.mascot);send(200,await state());return true;
  }
+ if(route==='/api/arcade/intimacy'&&req.method==='POST'){
+  const b=await readJson(req);
+  const code=typeof b.code==='string'?b.code.trim().toLowerCase():'';
+  if(code!=='xyg'){send(403,{error:'密码不对哦~'});return true}
+  const current=await db.setting('panda_cat_intimate').catch(()=>'0');
+  const next=b.toggle?(current==='1'?'0':'1'):'1';
+  await db.saveSetting('panda_cat_intimate',next);
+  send(200,{ok:true,intimate:next==='1',state:await state()});return true;
+ }
  if(route==='/api/arcade/reaction'&&req.method==='POST'){
   const b=await readJson(req);if(!idOk(b.attemptId)||!Array.isArray(b.rounds)||b.rounds.length!==3||b.rounds.some(n=>!Number.isInteger(n)||n<50||n>2000)){send(400,{error:'请完成三轮反应挑战，每轮有效成绩为 50–2000 毫秒'});return true}
   await db.arcadeCleanup(dayAt(timestamp-7*86400000),timestamp);

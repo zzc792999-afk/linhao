@@ -11,14 +11,73 @@
  const reactionNotice=text=>$('#reaction-status').textContent=text;
  const drawingNotice=text=>$('#drawing-publish-status').textContent=text;
  async function api(route,method='GET',body){if(preview)throw Error('共享游戏请在班级网站正式网址中使用。');if(method!=='GET'&&navigator.onLine===false)throw Error('当前离线，内容仍保留；联网后请手动重试。');let response;try{response=await fetch('/api/arcade'+route,{method,credentials:'same-origin',headers:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000)})}catch{throw Error('连接暂未回应，内容已保留。请检查网络后重试。')}let data;try{data=await response.json()}catch{throw Error('游乐厅正在恢复连接，请稍后重试。')}if(!response.ok)throw Object.assign(Error(data.error||'这次没有完成，请稍后重试'),{status:response.status});return data}
- function apply(data,mutation=true){if(mutation)revision++;state=data;if(!profileDirty){$('#arcade-profile-name').value=data.my.name||'路过同学';$('#arcade-profile-mascot').value=pets[data.my.mascot]?data.my.mascot:'panda'}renderProfileAvatar();renderPets();renderRanking();renderWall()}
+ function apply(data,mutation=true){if(mutation)revision++;state=data;if(!profileDirty){$('#arcade-profile-name').value=data.my.name||'路过同学';$('#arcade-profile-mascot').value=pets[data.my.mascot]?data.my.mascot:'panda'}renderProfileAvatar();renderPets();renderRanking();renderWall();updateHomepageMascots()}
  function refresh(force=false,announce=false){if(loading){if(!force)return loading;if(!queued)queued=loading.catch(()=>{}).then(()=>{queued=null;return refresh(false,announce)});return queued}$('#arcade-refresh').disabled=true;loading=(async()=>{try{const first=!state,startedAtRevision=revision,result=await api('');if(revision!==startedAtRevision)return;apply(result,false);if(first||announce)notice('● 游乐厅已同步 · 吉祥物和作品全班共享')}catch(error){notice(error.message);throw error}finally{$('#arcade-refresh').disabled=false}})().finally(()=>loading=null);return loading}
  function setTab(tab){if(!['pets','reflex','guess'].includes(tab))return;selectedTab=tab;document.querySelectorAll('[data-arcade-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.arcadeTab===tab);b.setAttribute('aria-pressed',String(b.dataset.arcadeTab===tab))});document.querySelectorAll('[data-arcade-panel]').forEach(p=>p.hidden=p.dataset.arcadePanel!==tab);if(tab!=='reflex')pauseTrial();if(tab==='guess')observeWall()}
  document.querySelectorAll('[data-arcade-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.arcadeTab)));
  for(const id of ['arcade-profile-name','arcade-profile-mascot'])$('#'+id).addEventListener('input',()=>{profileDirty=true;renderProfileAvatar()});
  $('#arcade-save-profile').addEventListener('click',async()=>{const controls=['arcade-profile-name','arcade-profile-mascot','arcade-save-profile'].map(id=>$('#'+id));controls.forEach(n=>n.disabled=true);try{const name=$('#arcade-profile-name').value.trim();if(!name||name.length>16)throw Error('给自己起一个 1–16 字的游乐厅昵称吧。');const result=await api('/profile','PUT',{name,mascot:$('#arcade-profile-mascot').value});profileDirty=false;apply(result);notice('身份已保存，以后上榜和猜画就用这个昵称。')}catch(error){notice(error.message)}finally{controls.forEach(n=>n.disabled=false)}});
  function requireProfile(){if(!state)throw Error('游乐厅还没连上，请先点「同步新鲜事」。');if(profileDirty)throw Error('上方昵称或头像有修改，请先点「保存我的身份」。')}
- function renderPets(){if(!state)return;const fed=state.pets.filter(p=>p.fed).length;$('#pet-day-status').textContent=state.day+' · 今日已投喂 '+fed+' / '+state.pets.length+' 位小伙伴';$('#sticker-status').textContent='已收集 '+state.my.stickerCount+' 枚纪念贴纸 · 今天也留下小小的快乐。';$('#arcade-mascots').replaceChildren(...state.pets.filter(p=>pets[p.id]).map((pet,index)=>{const def=pets[pet.id],card=el('article',undefined,'arcade-pet-card');card.dataset.arcadePet=pet.id;const formName=pet.name||def[1];const isEvolved=formName!==def[1];const top=el('div',undefined,'pet-card-top');top.append(el('span','CREW / '+String(index+1).padStart(2,'0')),el('span','Lv.'+pet.level+(isEvolved?' · '+formName:''),'pet-level'));const portrait=el('div',undefined,'pet-portrait');portrait.append(mascotIcon(pet.id,pet.emoji));const progress=el('progress',undefined,'pet-progress');progress.max=Math.max(1,Number(pet.needed)||10);progress.value=Math.max(0,Number(pet.progress)||0);progress.setAttribute('aria-label',formName+'的本级成长进度');const growth=el('div',undefined,'pet-growth');growth.append(el('span','全班投喂 '+pet.feeds+' 次'),el('span',progress.value+' / '+progress.max));const evoHint=pet.nextForm?'每10票升级 · 距「'+pet.nextForm+'」还差 '+(10-pet.progress)+' 票':'✨ 已达至尊进化形态！';const evoBadge=el('div',evoHint,'pet-evolution-hint');const b=el('button',pet.fed?'✓ 今天已投喂':'🥬 投喂一次','pet-feed'+(pet.fed?' fed':''));b.type='button';b.disabled=pet.fed||feeding.has(pet.id);b.addEventListener('click',async()=>{feeding.add(pet.id);b.disabled=true;try{const oldLevel=pet.level;const res=await api('/feed','PUT',{mascot:pet.id});apply(res);const updated=document.querySelector('[data-arcade-pet="'+pet.id+'"]');updated?.classList.add('pet-feed-pop');setTimeout(()=>updated?.classList.remove('pet-feed-pop'),900);const nowPet=res.pets?.find(p=>p.id===pet.id);if(nowPet&&nowPet.level>oldLevel){notice('🎉 升级啦！'+def[1]+' 进阶进化成了「'+nowPet.name+'」！全班共同见证！')}else{notice('今天也照顾了'+formName+'，全班都能看到它的成长。'+(nowPet?.nextForm?' 再投 '+(10-nowPet.progress)+' 次即可进化！':''))}}catch(error){notice(error.message)}finally{feeding.delete(pet.id);if(!state?.pets.find(p=>p.id===pet.id)?.fed)renderPets()}});card.append(top,portrait,el('h4',isEvolved?formName+' ('+def[1]+')':formName),el('p',pet.motto||def[2],'pet-personality'),progress,growth,evoBadge,b);return card}));$('#arcade-stickers').replaceChildren(...Object.entries(pets).map(([id,def])=>{const owned=state.pets.find(p=>p.id===id)?.fed,card=el('div',undefined,'arcade-sticker'+(owned?' owned':''));card.title=(owned?'今日已收集：':'今日待收集：')+def[1];card.append(mascotIcon(id),el('small',owned?'今日已盖章':def[1]));card.addEventListener('click',()=>{const curPet=state?.pets?.find(p=>p.id===id);const curName=curPet?.name||def[1];const curEmoji=curPet?.emoji||def[0];notice((owned?'🎉【今日已收集】':'🥬【今日待收集】')+curName+'（'+(curEmoji||'')+')：'+(curPet?.motto||def[2])+(owned?'':' · 投喂一次即可盖章解锁。'));card.classList.add('pet-feed-pop');setTimeout(()=>card.classList.remove('pet-feed-pop'),900)});return card}))}
+ function isIntimateActive(){return !!(state?.intimate||localStorage.getItem('class2501_intimate')==='1')}
+ function updateHomepageMascots(){
+  const active=isIntimateActive();
+  const homePanda=document.querySelector('.mascot-card[data-mascot-jump="panda"]');
+  const homeCat=document.querySelector('.mascot-card[data-mascot-jump="cat"]');
+  if(homePanda){
+   homePanda.classList.toggle('pet-intimate',active);
+   const tag=homePanda.querySelector('.tag');if(tag)tag.textContent=active?'💕 亲密 · 喵熊CP':'CLASS MASCOT / 07';
+   const motto=homePanda.querySelector('p');if(motto)motto.textContent=active?'和野猫靠在一起晒太阳，竹子分你一大半 🐾💕':'黑白之间，藏着满满的可爱。';
+  }
+  if(homeCat){
+   homeCat.classList.toggle('pet-intimate',active);
+   const tag=homeCat.querySelector('.tag');if(tag)tag.textContent=active?'🐾 亲密 · 熊喵CP':'CLASS MASCOT / 04';
+   const motto=homeCat.querySelector('p');if(motto)motto.textContent=active?'在熊猫软软的怀里打呼噜，喵星大魔王也投降 🐱❤️':'自由探索，好奇不打烊。';
+  }
+ }
+ function triggerIntimateShower(){
+  const emojis=['💕','💖','🐾','✨','🐱','🐼','❤️','🌸'];
+  for(let i=0;i<18;i++){
+   const heart=el('div',emojis[i%emojis.length],'intimate-heart-fly');
+   heart.style.left=Math.random()*85+5+'vw';
+   heart.style.bottom=Math.random()*20+10+'px';
+   heart.style.setProperty('--sway-x',(Math.random()*120-60)+'px');
+   heart.style.animationDelay=(Math.random()*0.6)+'s';
+   document.body.append(heart);
+   setTimeout(()=>heart.remove(),2600);
+  }
+ }
+ async function handlePandaClick(e){
+  if(e){e.preventDefault();e.stopPropagation()}
+  const pwd=window.prompt('请输入密码：');
+  if(pwd===null)return;
+  const code=pwd.trim().toLowerCase();
+  if(code==='xyg'){
+   const isCurrently=isIntimateActive();
+   try{
+    const res=await api('/intimacy','POST',{code:'xyg',toggle:isCurrently});
+    if(res.intimate){localStorage.setItem('class2501_intimate','1');if(state)state.intimate=true}
+    else{localStorage.removeItem('class2501_intimate');if(state)state.intimate=false}
+   }catch{
+    if(isCurrently){localStorage.removeItem('class2501_intimate');if(state)state.intimate=false}
+    else{localStorage.setItem('class2501_intimate','1');if(state)state.intimate=true}
+   }
+   const active=isIntimateActive();
+   renderPets();
+   updateHomepageMascots();
+   if(active){
+    triggerIntimateShower();
+    notice('💖 亲密密码正确！熊猫和野猫开启亲密模式，两只小伙伴悄悄依偎在一起啦~ 🐾');
+    const pCard=document.querySelector('[data-arcade-pet="panda"]'),cCard=document.querySelector('[data-arcade-pet="cat"]');
+    pCard?.classList.add('pet-feed-pop');cCard?.classList.add('pet-feed-pop');
+    setTimeout(()=>{pCard?.classList.remove('pet-feed-pop');cCard?.classList.remove('pet-feed-pop')},900);
+   }else{
+    notice('🐾 熊猫和野猫暂时解除了亲密状态。');
+   }
+  }else{
+   alert('密码不对哦~');
+  }
+ }
+ function renderPets(){if(!state)return;const isIntimate=isIntimateActive();const fed=state.pets.filter(p=>p.fed).length;$('#pet-day-status').textContent=state.day+' · 今日已投喂 '+fed+' / '+state.pets.length+' 位小伙伴';$('#sticker-status').textContent='已收集 '+state.my.stickerCount+' 枚纪念贴纸 · 今天也留下小小的快乐。';$('#arcade-mascots').replaceChildren(...state.pets.filter(p=>pets[p.id]).map((pet,index)=>{const def=pets[pet.id],card=el('article',undefined,'arcade-pet-card'+(isIntimate&&['panda','cat'].includes(pet.id)?' pet-intimate':''));card.dataset.arcadePet=pet.id;const formName=pet.name||def[1];const isEvolved=formName!==def[1];const top=el('div',undefined,'pet-card-top');top.append(el('span','CREW / '+String(index+1).padStart(2,'0')),isIntimate&&pet.id==='panda'?el('span','💕 亲密 · 喵熊CP','pet-intimate-badge'):isIntimate&&pet.id==='cat'?el('span','🐾 亲密 · 熊喵CP','pet-intimate-badge'):el('span','Lv.'+pet.level+(isEvolved?' · '+formName:''),'pet-level'));const portrait=el('div',undefined,'pet-portrait');portrait.append(mascotIcon(pet.id,isIntimate&&pet.id==='panda'?'🐼':isIntimate&&pet.id==='cat'?'🐱':pet.emoji));if(pet.id==='panda'){portrait.style.cursor='pointer';portrait.title='熊猫';portrait.addEventListener('click',handlePandaClick)}card.addEventListener('mouseenter',()=>{if(isIntimate){if(pet.id==='panda')document.querySelector('[data-arcade-pet="cat"]')?.classList.add('pet-feed-pop');if(pet.id==='cat')document.querySelector('[data-arcade-pet="panda"]')?.classList.add('pet-feed-pop')}});card.addEventListener('mouseleave',()=>{if(isIntimate){document.querySelector('[data-arcade-pet="cat"]')?.classList.remove('pet-feed-pop');document.querySelector('[data-arcade-pet="panda"]')?.classList.remove('pet-feed-pop')}});const progress=el('progress',undefined,'pet-progress');progress.max=Math.max(1,Number(pet.needed)||10);progress.value=Math.max(0,Number(pet.progress)||0);progress.setAttribute('aria-label',formName+'的本级成长进度');const growth=el('div',undefined,'pet-growth');growth.append(el('span','全班投喂 '+pet.feeds+' 次'),el('span',progress.value+' / '+progress.max));const evoHint=pet.nextForm?'每10票升级 · 距「'+pet.nextForm+'」还差 '+(10-pet.progress)+' 票':'✨ 已达至尊进化形态！';const evoBadge=el('div',evoHint,'pet-evolution-hint');const b=el('button',pet.fed?'✓ 今天已投喂':'🥬 投喂一次','pet-feed'+(pet.fed?' fed':''));b.type='button';b.disabled=pet.fed||feeding.has(pet.id);b.addEventListener('click',async()=>{feeding.add(pet.id);b.disabled=true;try{const oldLevel=pet.level;const res=await api('/feed','PUT',{mascot:pet.id});apply(res);const updated=document.querySelector('[data-arcade-pet="'+pet.id+'"]');updated?.classList.add('pet-feed-pop');setTimeout(()=>updated?.classList.remove('pet-feed-pop'),900);const nowPet=res.pets?.find(p=>p.id===pet.id);if(nowPet&&nowPet.level>oldLevel){notice('🎉 升级啦！'+def[1]+' 进阶进化成了「'+nowPet.name+'」！全班共同见证！')}else{notice('今天也照顾了'+formName+'，全班都能看到它的成长。'+(nowPet?.nextForm?' 再投 '+(10-nowPet.progress)+' 次即可进化！':''))}}catch(error){notice(error.message)}finally{feeding.delete(pet.id);if(!state?.pets.find(p=>p.id===pet.id)?.fed)renderPets()}});const nameHeading=el('h4',isEvolved?formName+' ('+def[1]+')':formName);if(pet.id==='panda'){nameHeading.style.cursor='pointer';nameHeading.title='熊猫';nameHeading.addEventListener('click',handlePandaClick)}const mottoText=isIntimate&&pet.id==='panda'?'和野猫靠在一起晒太阳，竹子分你一大半 🐾💕':isIntimate&&pet.id==='cat'?'在熊猫软软的怀里打呼噜，喵星大魔王也投降 🐱❤️':(pet.motto||def[2]);card.append(top,portrait,nameHeading,el('p',mottoText,'pet-personality'),progress,growth,evoBadge,b);return card}));$('#arcade-stickers').replaceChildren(...Object.entries(pets).map(([id,def])=>{const owned=state.pets.find(p=>p.id===id)?.fed,card=el('div',undefined,'arcade-sticker'+(owned?' owned':'')+(isIntimate&&['panda','cat'].includes(id)?' pet-intimate':''));card.title=(owned?'今日已收集：':'今日待收集：')+def[1];card.append(mascotIcon(id),el('small',owned?'今日已盖章':def[1]));if(id==='panda'){card.style.cursor='pointer';card.addEventListener('click',handlePandaClick)}else{card.addEventListener('click',()=>{const curPet=state?.pets?.find(p=>p.id===id);const curName=curPet?.name||def[1];const curEmoji=curPet?.emoji||def[0];notice((owned?'🎉【今日已收集】':'🥬【今日待收集】')+curName+'（'+(curEmoji||'')+')：'+(curPet?.motto||def[2])+(owned?'':' · 投喂一次即可盖章解锁。'));card.classList.add('pet-feed-pop');setTimeout(()=>card.classList.remove('pet-feed-pop'),900)})}return card}))}
  function renderRanking(){const rows=state?.reactionLeaderboard||[];$('#reaction-leaderboard').replaceChildren(...rows.map((row,index)=>{const n=el('div',undefined,'arcade-rank-row'+(row.mine?' mine':'')),identity=el('span',undefined,'arcade-player-identity');identity.append(mascotIcon(row.mascot),el('span',row.name+(row.mine?'（你）':'')));n.append(el('span',String(index+1).padStart(2,'0'),'arcade-rank-number'),identity,el('strong',row.score+' ms','arcade-rank-score'));return n}));if(!rows.length)$('#reaction-leaderboard').append(el('p','手速榜还空着，来留下全班的第一道闪电。','arcade-empty'));if(state?.my.bestReaction!=null&&!['waiting','go','saving'].includes(reaction.phase))$('#reaction-progress').textContent='你的最好成绩 '+state.my.bestReaction+' ms'}
  const attemptKey='class2501-reaction-pending';const reaction={phase:'idle',rounds:[],goAt:0,timer:null,attemptId:null};
  const randomId=()=>crypto.randomUUID().replace(/-/g,'');
@@ -56,5 +115,8 @@
  document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseTrial()});window.addEventListener('beforeunload',event=>{if(strokes.length||profileDirty){event.preventDefault();event.returnValue=''}});repaint();
  if(preview){notice('这是静态展示页，请打开正式班级网站参与共享游戏。');$('#arcade-save-profile').disabled=true;$('#arcade-refresh').disabled=true;return}
  document.querySelectorAll('[data-mascot-jump]').forEach(card=>card.addEventListener('click',()=>{setTab('pets');const id=card.dataset.mascotJump,target=document.querySelector('[data-arcade-pet="'+id+'"]');if(target){target.scrollIntoView({behavior:'smooth',block:'center'});target.classList.add('pet-feed-pop');setTimeout(()=>target.classList.remove('pet-feed-pop'),900)}else{$('#arcade')?.scrollIntoView({behavior:'smooth'})}}));
+ const homePandaAvatar=document.querySelector('.mascot-card[data-mascot-jump="panda"] .mascot-avatar');
+ if(homePandaAvatar){homePandaAvatar.style.cursor='pointer';homePandaAvatar.title='熊猫';homePandaAvatar.addEventListener('click',handlePandaClick)}
+ updateHomepageMascots();
  window.addEventListener('class-synced',()=>refresh().catch(()=>{}));if(!preview)refresh().catch(()=>{});
 })();

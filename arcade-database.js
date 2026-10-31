@@ -146,24 +146,37 @@ export function arcadeStore(query){
     arcadeSaveProfile:(owner,name,mascot)=>query('INSERT INTO class_arcade_profiles(owner,name,mascot) VALUES($1,$2,$3) ON CONFLICT(owner) DO UPDATE SET name=excluded.name,mascot=excluded.mascot',[owner,name,mascot]),
     arcadeFeed:(day,owner,mascot)=>query('INSERT INTO class_arcade_feeds(day,owner,mascot) VALUES($1,$2,$3) ON CONFLICT(day,owner,mascot) DO NOTHING',[day,owner,mascot]),
     async arcadeState(owner,day){
-      const [me,totals,fed,best,reactionLeaderboard,drawings]=await Promise.all([
+      const [me,totals,fed,best,reactionLeaderboard,drawings,intimateRow]=await Promise.all([
         profile(owner),rows('SELECT mascot,COUNT(*) AS n FROM class_arcade_feeds GROUP BY mascot'),
         rows('SELECT mascot FROM class_arcade_feeds WHERE day=$1 AND owner=$2',[day,owner]),
         rows('SELECT score FROM class_arcade_scores WHERE owner=$1',[owner]),scores(owner),
-        rows('SELECT '+drawingColumns+' FROM class_arcade_drawings d LEFT JOIN class_arcade_guesses g ON g.drawing=d.id AND g.owner=$1 WHERE d.deleted=0 ORDER BY d.date DESC,d.id DESC LIMIT 100',[owner])
+        rows('SELECT '+drawingColumns+' FROM class_arcade_drawings d LEFT JOIN class_arcade_guesses g ON g.drawing=d.id AND g.owner=$1 WHERE d.deleted=0 ORDER BY d.date DESC,d.id DESC LIMIT 100',[owner]),
+        rows("SELECT value FROM class_settings WHERE key='panda_cat_intimate'").catch(()=>[])
       ]);
+      const intimate=intimateRow[0]?.value==='1';
       const pets=mascots.map(m=>{
         const feeds=Number(totals.find(t=>t.mascot===m.id)?.n||0);
         const formIdx=Math.min(m.forms.length-1,Math.floor(feeds/10));
         const currentForm=m.forms[formIdx];
         const nextForm=m.forms[formIdx+1]||null;
+        let motto=currentForm.motto;
+        let emoji=currentForm.emoji;
+        if(intimate){
+          if(m.id==='panda'){
+            emoji='🐼💕';
+            motto='和野猫靠在一起晒太阳，竹子分你一大半 🐾💕';
+          }else if(m.id==='cat'){
+            emoji='🐱❤️';
+            motto='在熊猫软软的怀里打呼噜，喵星大魔王也投降 🐾❤️';
+          }
+        }
         return {
           id:m.id,
           baseName:m.baseName,
           name:currentForm.name,
-          emoji:currentForm.emoji,
+          emoji,
           image:currentForm.image||m.image,
-          motto:currentForm.motto,
+          motto,
           feeds,
           formIndex:formIdx,
           level:1+Math.floor(feeds/10),
@@ -171,10 +184,11 @@ export function arcadeStore(query){
           needed:10,
           fed:fed.some(f=>f.mascot===m.id),
           forms:m.forms,
-          nextForm:nextForm?nextForm.name:null
+          nextForm:nextForm?nextForm.name:null,
+          intimate:intimate&&['panda','cat'].includes(m.id)
         };
       });
-      return {day,pets,my:{...me,stickerCount:fed.length,bestReaction:best[0]?Number(best[0].score):null},reactionLeaderboard,drawings:drawings.map(mapDrawing)};
+      return {day,pets,my:{...me,stickerCount:fed.length,bestReaction:best[0]?Number(best[0].score):null},reactionLeaderboard,drawings:drawings.map(mapDrawing),intimate};
     },
     async arcadeReaction(p){
       await query('INSERT INTO class_arcade_attempts(id,owner,rounds,score,day,date) SELECT $1,$2,$3,$4,$5,$6 WHERE (SELECT COUNT(*) FROM class_arcade_attempts WHERE owner=$2 AND day=$5)<30 ON CONFLICT(id) DO NOTHING',[p.id,p.owner,JSON.stringify(p.rounds),p.score,p.day,p.date]);

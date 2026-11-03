@@ -85,9 +85,9 @@ $('#upload').addEventListener('change',async event=>{
 });
 
 let notes=[];
-function renderNotes(){$('#message-count').textContent=notes.length?'最新 '+notes.length+' 条留言':'还没有留言，来留下第一句话';const target=$('#notes');target.replaceChildren();if(!notes.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='还没有留言。来贴上第一张青春便签吧。';target.append(empty);return}notes.forEach(note=>{const item=document.createElement('article');item.className='note';const head=document.createElement('div');head.className='note-header';const name=document.createElement('strong');name.textContent=note.name;const time=document.createElement('small');time.textContent=new Date(note.date).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const text=document.createElement('p');text.textContent=note.text;head.append(name,time);item.append(head,text);if(note.mine){const remove=document.createElement('button');remove.className='delete-note';remove.textContent='删除我的留言';remove.addEventListener('click',async()=>{remove.disabled=true;try{const data=await api('/notes/'+note.id,{method:'DELETE'});notes=data.notes;renderNotes();toast('留言已删除')}catch(error){toast(errorMessage(error));remove.disabled=false}});item.append(remove)}target.append(item)})}
+function renderNotes(){$('#message-count').textContent=notes.length?'最新 '+notes.length+' 条留言':'还没有留言，来留下第一句话';const target=$('#notes');target.replaceChildren();if(!notes.length){const empty=document.createElement('p');empty.className='empty';empty.textContent='还没有留言。来贴上第一张青春便签吧。';target.append(empty);return}notes.forEach(note=>{const item=document.createElement('article');item.className='note';const head=document.createElement('div');head.className='note-header';const name=document.createElement('strong');name.textContent=note.name;const time=document.createElement('small');time.textContent=new Date(note.date).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});const text=document.createElement('p');text.textContent=note.text;if(/mj/i.test(note.text)){const mjPill=document.createElement('button');mjPill.type='button';mjPill.className='mj-note-pill';mjPill.textContent='🕷️ MJ';mjPill.title='点击召唤蜘蛛侠比心！';mjPill.addEventListener('click',e=>{e.stopPropagation();triggerSpiderMJ('来自同窗留言的 MJ 比心 🕷️')});text.append(mjPill)}head.append(name,time);item.append(head,text);if(note.mine){const remove=document.createElement('button');remove.className='delete-note';remove.textContent='删除我的留言';remove.addEventListener('click',async()=>{remove.disabled=true;try{const data=await api('/notes/'+note.id,{method:'DELETE'});notes=data.notes;renderNotes();toast('留言已删除')}catch(error){toast(errorMessage(error));remove.disabled=false}});item.append(remove)}target.append(item)})}
 $('#message').addEventListener('input',()=>$('#char-count').textContent=$('#message').value.length+' / 200');
-$('#message-form').addEventListener('submit',async event=>{event.preventDefault();const name=$('#nickname').value.trim(),text=$('#message').value.trim();if(!name||!text){toast('请填写昵称和留言内容');return}const button=event.submitter;button.disabled=true;button.textContent='正在发布…';try{const data=await api('/notes',{method:'POST',body:JSON.stringify({name,text})});notes=data.notes;renderNotes();$('#message').value='';$('#char-count').textContent='0 / 200';storage.set('nickname',name);toast('留言已发布，其他设备也能看到。')}catch(error){toast(errorMessage(error))}finally{button.disabled=false;button.textContent='贴上留言 ↗'}});
+$('#message-form').addEventListener('submit',async event=>{event.preventDefault();const name=$('#nickname').value.trim(),text=$('#message').value.trim();if(!name||!text){toast('请填写昵称和留言内容');return}const button=event.submitter;button.disabled=true;button.textContent='正在发布…';try{const data=await api('/notes',{method:'POST',body:JSON.stringify({name,text})});notes=data.notes;renderNotes();$('#message').value='';$('#char-count').textContent='0 / 200';storage.set('nickname',name);toast('留言已发布，其他设备也能看到。');if(/mj/i.test(text)){setTimeout(()=>triggerSpiderMJ('留言暗号 · MJ 比心 🕷️'),300)}}catch(error){toast(errorMessage(error))}finally{button.disabled=false;button.textContent='贴上留言 ↗'}});
 $('#nickname').value=storage.get('nickname','');
 const status=document.createElement('div');status.className='sync-status';status.setAttribute('role','status');$('#notes').before(status);
 let refreshing=false;
@@ -257,3 +257,193 @@ if (backToTopBtn) {
 
   sections.forEach(sec => observer.observe(sec));
 })();
+
+
+// ========================================================
+// MJ Spider-Man Easter Egg (抖音同款倒挂比心特效)
+// ========================================================
+let isSpiderMJRunning = false;
+const spiderPhrases = [
+  '25计1 · MJ 比心 💕',
+  '代码无 BUG · 青春不设限 ✨',
+  '蜘蛛侠专属守护 · 快乐加倍 🕷️',
+  '期末全过 · 顶峰相见 🎓',
+  '心之所向 · 一起发光 🌟'
+];
+
+function playSpiderThwip() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+
+    // 1. Thwip sound (white noise + filter)
+    const dur = 0.12;
+    const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1000, ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(3000, ctx.currentTime + 0.1);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start();
+
+    // 2. Chime sound after spider hangs down (0.6s)
+    setTimeout(() => {
+      try {
+        const osc = ctx.createOscillator();
+        const oscGain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+        oscGain.gain.setValueAtTime(0.2, ctx.currentTime);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.connect(oscGain);
+        oscGain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } catch (_) {}
+    }, 600);
+  } catch (_) {}
+}
+
+function triggerSpiderMJ(customText) {
+  if (isSpiderMJRunning) return;
+  isSpiderMJRunning = true;
+
+  playSpiderThwip();
+
+  const phrase = customText || spiderPhrases[Math.floor(Math.random() * spiderPhrases.length)];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'spider-mj-overlay';
+  overlay.id = 'spider-mj-overlay';
+
+  const rig = document.createElement('div');
+  rig.className = 'spider-mj-rig';
+  rig.title = '点击蜘蛛侠，多爆几颗爱心！';
+
+  rig.innerHTML = `
+    <svg class="spider-mj-svg" viewBox="0 0 200 320" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="倒挂比心蜘蛛侠">
+      <line x1="100" y1="0" x2="100" y2="120" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
+      <line x1="100" y1="0" x2="100" y2="120" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round" opacity="0.3" />
+
+      <path d="M100 110 C80 90 60 115 72 140 C80 156 90 170 96 185" stroke="#1e40af" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M100 110 C120 90 140 115 128 140 C120 156 110 170 104 185" stroke="#1e40af" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M100 108 C86 98 76 112 73 125" stroke="#e11d48" stroke-width="14" stroke-linecap="round" />
+      <path d="M100 108 C114 98 124 112 127 125" stroke="#e11d48" stroke-width="14" stroke-linecap="round" />
+
+      <path d="M88 180 C82 195 82 210 85 224 C90 232 110 232 115 224 C118 210 118 195 112 180 Z" fill="#e11d48" stroke="#be123c" stroke-width="1.5" />
+      <path d="M86 185 C83 198 83 212 85 224 C89 224 93 218 93 205 C93 192 90 185 86 185 Z" fill="#1e40af" />
+      <path d="M114 185 C117 198 117 212 115 224 C111 224 107 218 107 205 C107 192 110 185 114 185 Z" fill="#1e40af" />
+      <line x1="100" y1="180" x2="100" y2="228" stroke="#881337" stroke-width="1.2" opacity="0.65" />
+      <path d="M88 198 Q100 190 112 198" stroke="#881337" stroke-width="1.2" fill="none" opacity="0.65" />
+      <path d="M89 212 Q100 204 111 212" stroke="#881337" stroke-width="1.2" fill="none" opacity="0.65" />
+      <ellipse cx="100" cy="202" rx="2.5" ry="3.5" fill="#0f172a" />
+      <path d="M98 200 Q94 195 91 199 M102 200 Q106 195 109 199 M98 204 Q93 208 90 205 M102 204 Q107 208 110 205" stroke="#0f172a" stroke-width="1" fill="none" />
+
+      <path d="M85 228 C76 242 78 266 92 276 C97 280 103 280 108 276 C122 266 124 242 115 228 C108 220 92 220 85 228 Z" fill="#e11d48" stroke="#be123c" stroke-width="1.5" />
+      <line x1="100" y1="222" x2="100" y2="279" stroke="#881337" stroke-width="1.2" opacity="0.65" />
+      <path d="M86 238 Q100 246 114 238" stroke="#881337" stroke-width="1.2" fill="none" opacity="0.65" />
+      <path d="M85 256 Q100 266 115 256" stroke="#881337" stroke-width="1.2" fill="none" opacity="0.65" />
+
+      <path d="M87 242 Q96 247 98 259 Q89 256 85 249 Z" fill="#ffffff" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round" />
+      <path d="M113 242 Q104 247 102 259 Q111 256 115 249 Z" fill="#ffffff" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round" />
+
+      <path d="M85 222 C70 230 68 250 82 264 C88 268 95 264 98 258" stroke="#e11d48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      <path d="M115 222 C130 230 132 250 118 264 C112 268 105 264 102 258" stroke="#e11d48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+      <g class="spider-heart">
+        <path d="M100 272 C100 272 68 248 68 228 C68 214 80 204 92 214 C97 218 100 223 100 223 C100 223 103 218 108 214 C120 204 132 214 132 228 C132 248 100 272 100 272 Z" fill="url(#spiderHeartGrad)" filter="url(#spiderHeartGlow)" />
+        <path d="M76 226 C76 218 82 213 88 217" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.75" fill="none" />
+      </g>
+
+      <defs>
+        <linearGradient id="spiderHeartGrad" x1="68" y1="208" x2="132" y2="272" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#ff3366" />
+          <stop offset="100%" stop-color="#c2002f" />
+        </linearGradient>
+        <filter id="spiderHeartGlow" x="50" y="190" width="100" height="100" filterUnits="userSpaceOnUse">
+          <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#ff1744" flood-opacity="0.8" />
+        </filter>
+      </defs>
+    </svg>
+    <div class="spider-mj-badge">
+      <span>🕷️</span>
+      <span>${phrase}</span>
+    </div>
+  `;
+
+  // Click interaction on spider
+  const emojis = ['💖', '💕', '✨', '🕷️', '❤️', '🌟'];
+  rig.addEventListener('click', (e) => {
+    e.stopPropagation();
+    for (let i = 0; i < 8; i++) {
+      const p = document.createElement('div');
+      p.className = 'spider-heart-particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      const angle = (Math.PI * 2 / 8) * i + (Math.random() * 0.4 - 0.2);
+      const dist = 55 + Math.random() * 65;
+      p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+      p.style.left = '90px';
+      p.style.top = '240px';
+      rig.appendChild(p);
+      setTimeout(() => p.remove(), 1100);
+    }
+  });
+
+  overlay.appendChild(rig);
+  document.body.appendChild(overlay);
+
+  // Auto clean-up after 3.8s
+  setTimeout(() => {
+    overlay.remove();
+    isSpiderMJRunning = false;
+  }, 3800);
+}
+window.triggerSpiderMJ = triggerSpiderMJ;
+
+// Keyboard trigger (typing 'm' then 'j' on PC)
+let keyBuffer = '';
+let keyTimer = null;
+window.addEventListener('keydown', (e) => {
+  const targetTag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+  if (targetTag === 'input' || targetTag === 'textarea' || e.target.isContentEditable) return;
+  if (e.key && e.key.length === 1) {
+    keyBuffer += e.key.toLowerCase();
+    clearTimeout(keyTimer);
+    keyTimer = setTimeout(() => { keyBuffer = ''; }, 1200);
+    if (keyBuffer.endsWith('mj')) {
+      keyBuffer = '';
+      triggerSpiderMJ('按键暗号 · 蜘蛛侠空降！🕷️');
+    }
+  }
+});
+
+// Double tap/click on Logo to trigger
+let lastLogoTap = 0;
+const logoEl = document.querySelector('header .logo');
+if (logoEl) {
+  logoEl.addEventListener('click', (e) => {
+    const now = Date.now();
+    if (now - lastLogoTap < 400) {
+      e.preventDefault();
+      triggerSpiderMJ('25计算机1 · 专属守护 💕');
+      lastLogoTap = 0;
+    } else {
+      lastLogoTap = now;
+    }
+  });
+}

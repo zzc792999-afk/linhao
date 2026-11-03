@@ -260,61 +260,225 @@ if (backToTopBtn) {
 
 
 // ========================================================
-// MJ Spider-Man Easter Egg (抖音同款倒挂比心特效)
+// MJ Spider-Man Easter Egg (抖音同款经典卡点配乐 + 倒挂比心)
 // ========================================================
 let isSpiderMJRunning = false;
 const spiderPhrases = [
-  '25计1 · MJ 比心 💕',
-  '代码无 BUG · 青春不设限 ✨',
-  '蜘蛛侠专属守护 · 快乐加倍 🕷️',
-  '期末全过 · 顶峰相见 🎓',
-  '心之所向 · 一起发光 🌟'
+  '🕷️ MJ · Smooth Criminal 🕺',
+  '25计1 · 经典卡点 Hee-Hee! ⚡',
+  '专属守护 · BUG 全消 ✨',
+  '双厨狂喜 · 蜘蛛侠跳太空步 🐾',
+  '青春不设限 · 一起发光 💕'
 ];
 
-function playSpiderThwip() {
+function playMJSmoothCriminal() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     if (ctx.state === 'suspended') ctx.resume();
 
-    // 1. Thwip sound (white noise + filter)
-    const dur = 0.12;
-    const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
-    }
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1000, ctx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(3000, ctx.currentTime + 0.1);
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    noise.start();
+    const bpm = 118;
+    const beat = 60 / bpm; // ~0.508s
+    const s16 = beat / 4;  // ~0.127s
+    const startTime = ctx.currentTime + 0.03;
 
-    // 2. Chime sound after spider hangs down (0.6s)
-    setTimeout(() => {
-      try {
-        const osc = ctx.createOscillator();
-        const oscGain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
-        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
-        oscGain.gain.setValueAtTime(0.2, ctx.currentTime);
-        oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-        osc.connect(oscGain);
-        oscGain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.35);
-      } catch (_) {}
-    }, 600);
+    // Master dynamic compressor for punchy 80s studio groove
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.setValueAtTime(-16, startTime);
+    comp.knee.setValueAtTime(8, startTime);
+    comp.ratio.setValueAtTime(6, startTime);
+    comp.attack.setValueAtTime(0.003, startTime);
+    comp.release.setValueAtTime(0.15, startTime);
+    comp.connect(ctx.destination);
+
+    // Initial web shoot thwip
+    const thwipDur = 0.12;
+    const thwipBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * thwipDur), ctx.sampleRate);
+    const thwipData = thwipBuf.getChannelData(0);
+    for (let i = 0; i < thwipData.length; i++) {
+      thwipData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.03));
+    }
+    const thwipSource = ctx.createBufferSource();
+    thwipSource.buffer = thwipBuf;
+    const thwipFilter = ctx.createBiquadFilter();
+    thwipFilter.type = 'bandpass';
+    thwipFilter.frequency.setValueAtTime(1200, startTime);
+    thwipFilter.frequency.exponentialRampToValueAtTime(3200, startTime + 0.1);
+    const thwipGain = ctx.createGain();
+    thwipGain.gain.setValueAtTime(0.35, startTime);
+    thwipGain.gain.exponentialRampToValueAtTime(0.001, startTime + thwipDur);
+    thwipSource.connect(thwipFilter);
+    thwipFilter.connect(thwipGain);
+    thwipGain.connect(comp);
+    thwipSource.start(startTime);
+
+    // Heavy Kick Drum
+    function playKick(t) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.setValueAtTime(130, t);
+      osc.frequency.exponentialRampToValueAtTime(36, t + 0.12);
+      gain.gain.setValueAtTime(0.95, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(gain);
+      gain.connect(comp);
+      osc.start(t);
+      osc.stop(t + 0.22);
+    }
+
+    // 80s Snare / Clap with noise burst
+    function playSnare(t) {
+      const dur = 0.18;
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(800, t);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.65, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(comp);
+      noise.start(t);
+
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.frequency.setValueAtTime(240, t);
+      osc.frequency.exponentialRampToValueAtTime(110, t + 0.08);
+      oscGain.gain.setValueAtTime(0.5, t);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      osc.connect(oscGain);
+      oscGain.connect(comp);
+      osc.start(t);
+      osc.stop(t + 0.09);
+    }
+
+    // 16th Hi-Hat
+    function playHat(t, accent = false) {
+      const dur = 0.04;
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(7000, t);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(accent ? 0.28 : 0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(comp);
+      noise.start(t);
+    }
+
+    // Synth Brass / Slap Bass Note
+    function playSynthNote(freq, t, dur) {
+      const osc = ctx.createOscillator();
+      const sub = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t);
+
+      sub.type = 'square';
+      sub.frequency.setValueAtTime(freq / 2, t);
+
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(4.5, t);
+      filter.frequency.setValueAtTime(freq * 6, t);
+      filter.frequency.exponentialRampToValueAtTime(freq * 1.5, t + dur * 0.75);
+
+      gain.gain.setValueAtTime(0.42, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+      osc.connect(filter);
+      sub.connect(filter);
+      filter.connect(gain);
+      gain.connect(comp);
+
+      osc.start(t);
+      sub.start(t);
+      osc.stop(t + dur);
+      sub.stop(t + dur);
+    }
+
+    // Iconic MJ "Hee-Hee! / Aow!" Vocal Shout
+    function playVocalHeeHee(t) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(740, t);
+      osc.frequency.exponentialRampToValueAtTime(1080, t + 0.12);
+      osc.frequency.exponentialRampToValueAtTime(940, t + 0.38);
+
+      const f1 = ctx.createBiquadFilter();
+      f1.type = 'bandpass';
+      f1.frequency.setValueAtTime(800, t);
+      f1.Q.setValueAtTime(4.0, t);
+
+      const f2 = ctx.createBiquadFilter();
+      f2.type = 'bandpass';
+      f2.frequency.setValueAtTime(2600, t);
+      f2.Q.setValueAtTime(5.0, t);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.exponentialRampToValueAtTime(0.55, t + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
+
+      osc.connect(f1);
+      osc.connect(f2);
+      f1.connect(gain);
+      f2.connect(gain);
+      gain.connect(comp);
+
+      osc.start(t);
+      osc.stop(t + 0.45);
+    }
+
+    // Smooth Criminal notes in A minor
+    const A3 = 220, G3 = 196, B3 = 246.94, C4 = 261.63, E3 = 164.81;
+    const riff = [
+      [A3, 0, 1.8],
+      [A3, 2, 1.8],
+      [A3, 4, 1.8],
+      [G3, 6, 0.9],
+      [A3, 7, 0.9],
+      [B3, 8, 1.8],
+      [C4, 10, 1.8],
+      [B3, 12, 1.8],
+      [G3, 14, 1.8],
+      [E3, 16, 1.8],
+      [G3, 18, 1.8],
+      [A3, 20, 5.0]
+    ];
+
+    riff.forEach(([freq, offset, dur]) => {
+      playSynthNote(freq, startTime + offset * s16, dur * s16);
+    });
+
+    for (let i = 0; i < 28; i++) {
+      const t = startTime + i * s16;
+      playHat(t, i % 4 === 0);
+      if (i === 0 || i === 4 || i === 8 || i === 12 || i === 16 || i === 20 || i === 24) {
+        playKick(t);
+      }
+      if (i === 4 || i === 12 || i === 20) {
+        playSnare(t);
+      }
+    }
+
+    // Climax vocal shout on the drop (beat 20)
+    playVocalHeeHee(startTime + 20 * s16);
   } catch (_) {}
 }
 
@@ -322,7 +486,7 @@ function triggerSpiderMJ(customText) {
   if (isSpiderMJRunning) return;
   isSpiderMJRunning = true;
 
-  playSpiderThwip();
+  playMJSmoothCriminal();
 
   const phrase = customText || spiderPhrases[Math.floor(Math.random() * spiderPhrases.length)];
 
@@ -389,6 +553,24 @@ function triggerSpiderMJ(customText) {
   const emojis = ['💖', '💕', '✨', '🕷️', '❤️', '🌟'];
   rig.addEventListener('click', (e) => {
     e.stopPropagation();
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const c = new AudioCtx();
+        const o = c.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(800, c.currentTime);
+        o.frequency.exponentialRampToValueAtTime(1100, c.currentTime + 0.1);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.4, c.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.25);
+        o.connect(g);
+        g.connect(c.destination);
+        o.start();
+        o.stop(c.currentTime + 0.25);
+      }
+    } catch (_) {}
+
     for (let i = 0; i < 8; i++) {
       const p = document.createElement('div');
       p.className = 'spider-heart-particle';
@@ -407,11 +589,11 @@ function triggerSpiderMJ(customText) {
   overlay.appendChild(rig);
   document.body.appendChild(overlay);
 
-  // Auto clean-up after 3.8s
+  // Auto clean-up after 4.1s
   setTimeout(() => {
     overlay.remove();
     isSpiderMJRunning = false;
-  }, 3800);
+  }, 4100);
 }
 window.triggerSpiderMJ = triggerSpiderMJ;
 
@@ -427,7 +609,7 @@ window.addEventListener('keydown', (e) => {
     keyTimer = setTimeout(() => { keyBuffer = ''; }, 1200);
     if (keyBuffer.endsWith('mj')) {
       keyBuffer = '';
-      triggerSpiderMJ('按键暗号 · 蜘蛛侠空降！🕷️');
+      triggerSpiderMJ('按键暗号 · Smooth Criminal 🕺');
     }
   }
 });

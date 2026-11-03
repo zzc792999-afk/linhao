@@ -197,7 +197,7 @@ if (backToTopBtn) {
   const sectionIds = [
     'home', 'mobile-portals', 'arcade', 'people', 'mascots',
     'album', 'messages', 'class-film', 'playground',
-    'social-area', 'teachers', 'targets', 'class-tools'
+    'social-area', 'teachers', 'targets', 'suggestions', 'class-tools'
   ];
   const sections = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
   if (!sections.length || !('IntersectionObserver' in window)) return;

@@ -192,7 +192,67 @@ for(const backend of ['sqlite','postgres'])test(backend+': campus marquee, teach
   assert.equal((await admin(`/admin/campus/marquee/${marqueeId}`,'DELETE')).status, 200);
   assert.equal((await admin(`/admin/campus/teachers/${teacherId}`,'DELETE')).status, 200);
 
-  // 7. Data preservation check
+  // 7. Suggestions Box (意见箱)
+  const initSugg = await student1('/campus/suggestions');
+  assert.equal(initSugg.status, 200);
+  assert.ok(initSugg.data.suggestions.length >= 2);
+
+  // Post public suggestion
+  const pubSuggRes = await student1('/campus/suggestions', 'POST', {
+    category: 'feature',
+    nickname: '小李同学',
+    contact: 'qq:10086',
+    content: '能不能加一个班级意见箱？',
+    is_public: true
+  });
+  assert.equal(pubSuggRes.status, 201);
+  const pubSuggId = pubSuggRes.data.id;
+  assert.ok(pubSuggId);
+
+  // Post private suggestion
+  const privSuggRes = await student1('/campus/suggestions', 'POST', {
+    category: 'whisper',
+    nickname: '悄悄话同学',
+    contact: '',
+    content: '给班委的私密小建议',
+    is_public: false
+  });
+  assert.equal(privSuggRes.status, 201);
+  const privSuggId = privSuggRes.data.id;
+
+  // Validation errors
+  assert.equal((await student1('/campus/suggestions', 'POST', { content: 'ab' })).status, 400);
+  assert.equal((await student1('/campus/suggestions', 'POST', { content: 'x'.repeat(501) })).status, 400);
+
+  // Privacy isolation
+  const s1View = await student1('/campus/suggestions');
+  assert.ok(s1View.data.suggestions.some(s => s.id === privSuggId && s.mine === true));
+  const s2View = await student2('/campus/suggestions');
+  assert.equal(s2View.data.suggestions.some(s => s.id === privSuggId), false);
+  assert.ok(s2View.data.suggestions.some(s => s.id === pubSuggId && s.mine === false));
+
+  // Admin view & reply
+  const adminSugg = await admin('/admin/campus/suggestions');
+  assert.equal(adminSugg.status, 200);
+  assert.ok(adminSugg.data.suggestions.some(s => s.id === privSuggId));
+  const replyRes = await admin(`/admin/campus/suggestions/${pubSuggId}/reply`, 'PUT', {
+    reply: '意见箱已开发完成并上线！',
+    status: 'done'
+  });
+  assert.equal(replyRes.status, 200);
+
+  // Verify replied suggestion visible to other students
+  const s2AfterReply = await student2('/campus/suggestions');
+  const pubItem = s2AfterReply.data.suggestions.find(s => s.id === pubSuggId);
+  assert.equal(pubItem.status, 'done');
+  assert.equal(pubItem.reply, '意见箱已开发完成并上线！');
+
+  // Deletion checks
+  assert.equal((await student2(`/campus/suggestions/${pubSuggId}`, 'DELETE')).status, 404);
+  assert.equal((await student1(`/campus/suggestions/${privSuggId}`, 'DELETE')).status, 200);
+  assert.equal((await admin(`/admin/campus/suggestions/${pubSuggId}`, 'DELETE')).status, 200);
+
+  // 8. Data preservation check
   assert.equal((await store.notes('check'))[0].text, '原留言保持');
   assert.equal(await store.setting('announcement'), '原公告保持');
 

@@ -569,6 +569,260 @@
   }
 
   // ==========================================================================
+  // 4. 班级意见箱与心声回音壁 (Class Suggestions & Echo Wall)
+  // ==========================================================================
+  let allSuggestions = [];
+  let activeSuggestionFilter = 'all';
+
+  const categoryLabels = {
+    feature: '✨ 功能建议',
+    bug: '🐞 捉虫反馈',
+    activity: '🎉 班级活动',
+    whisper: '💌 匿名悄悄话'
+  };
+
+  const statusLabels = {
+    pending: '等待回音',
+    adopted: '已采纳 ✨',
+    done: '已实现 🎉',
+    noted: '已留存'
+  };
+
+  function formatSuggDate(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString('zh-CN', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return iso;
+    }
+  }
+
+  async function loadSuggestions() {
+    const list = $('#suggestions-list');
+    const totalCount = $('#suggestions-total-count');
+    if (!list) return;
+
+    try {
+      const data = await api('/campus/suggestions');
+      allSuggestions = data.suggestions || [];
+      if (totalCount) totalCount.textContent = String(allSuggestions.length);
+      renderSuggestions();
+    } catch (err) {
+      if (list) {
+        list.innerHTML = `<p class="small-note" style="color:#d9635b">加载意见箱失败：${escapeHtml(err.message)}</p>`;
+      }
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderSuggestions() {
+    const list = $('#suggestions-list');
+    if (!list) return;
+
+    const filtered = allSuggestions.filter(s => {
+      if (activeSuggestionFilter === 'replied') {
+        return !!(s.reply && s.reply.trim());
+      }
+      if (activeSuggestionFilter === 'adopted') {
+        return s.status === 'adopted' || s.status === 'done';
+      }
+      if (activeSuggestionFilter === 'mine') {
+        return !!s.canDelete;
+      }
+      return true;
+    });
+
+    if (!filtered.length) {
+      list.innerHTML = `<div class="small-note" style="text-align:center; padding: 32px 16px; color: var(--muted);">
+        <span style="font-size: 24px; display:block; margin-bottom: 8px;">📮</span>
+        暂无相关建议，快来写下你的想法或意见吧～
+      </div>`;
+      return;
+    }
+
+    list.replaceChildren(...filtered.map(s => {
+      const card = el('article', undefined, 'suggestion-card');
+
+      // 头部徽章与元信息
+      const header = el('div', undefined, 'suggestion-card-header');
+      const badges = el('div', undefined, 'suggestion-card-badges');
+
+      // 分类徽章
+      const catCls = 'sugg-badge sugg-badge-' + (s.category || 'whisper');
+      const catText = categoryLabels[s.category] || s.category;
+      badges.append(el('span', catText, catCls));
+
+      // 状态徽章
+      const statCls = 'sugg-badge sugg-status-' + (s.status || 'pending');
+      const statText = statusLabels[s.status] || '等待回音';
+      badges.append(el('span', statText, statCls));
+
+      // 私密徽章（若为私密）
+      if (!s.is_public) {
+        badges.append(el('span', '🔒 仅班委可见', 'sugg-badge sugg-status-noted'));
+      }
+
+      const meta = el('div', undefined, 'suggestion-card-meta');
+      meta.textContent = `${s.nickname || '匿名同学'} · ${formatSuggDate(s.date)}`;
+
+      header.append(badges, meta);
+
+      // 正文
+      const content = el('p', s.content, 'suggestion-card-content');
+
+      card.append(header, content);
+
+      // 回音回复框
+      if (s.reply && s.reply.trim()) {
+        const replyBox = el('div', undefined, 'suggestion-reply-box');
+        const replyHead = el('div', undefined, 'suggestion-reply-header');
+        replyHead.append(
+          el('span', '班委 / 管理员 回音 📢', 'suggestion-reply-badge'),
+          el('span', formatSuggDate(s.reply_date), 'suggestion-reply-date')
+        );
+        const replyText = el('p', s.reply, 'suggestion-reply-content');
+        replyBox.append(replyHead, replyText);
+        card.append(replyBox);
+      }
+
+      // 自己投递的建言可删除
+      if (s.canDelete) {
+        const footer = el('div', undefined, 'suggestion-card-footer');
+        const delBtn = el('button', '撤回我的提议 ✕', 'sugg-delete-btn');
+        delBtn.type = 'button';
+        delBtn.addEventListener('click', async () => {
+          if (!confirm('确定撤回并删除这条建议吗？')) return;
+          delBtn.disabled = true;
+          try {
+            await api(`/campus/suggestions/${encodeURIComponent(s.id)}`, 'DELETE');
+            showToast('已撤回您的建议');
+            await loadSuggestions();
+          } catch (err) {
+            alert(err.message);
+          } finally {
+            delBtn.disabled = false;
+          }
+        });
+        footer.append(delBtn);
+        card.append(footer);
+      }
+
+      return card;
+    }));
+  }
+
+  function setupSuggestionForm() {
+    const form = $('#class-suggestion-form');
+    if (!form) return;
+
+    // 分类单选样式切换
+    const catLabels = form.querySelectorAll('.category-radio');
+    const formBadge = $('#suggestion-form-badge');
+    catLabels.forEach(label => {
+      const radio = label.querySelector('input[type="radio"]');
+      if (!radio) return;
+      radio.addEventListener('change', () => {
+        catLabels.forEach(l => l.classList.remove('active'));
+        label.classList.add('active');
+        if (formBadge) {
+          formBadge.textContent = '📮 ' + (categoryLabels[radio.value] || '提建议');
+        }
+      });
+    });
+
+    // 字数统计监听
+    const textarea = $('#suggestion-content-input');
+    const charCounter = $('#suggestion-char-count');
+    if (textarea && charCounter) {
+      textarea.addEventListener('input', () => {
+        charCounter.textContent = String(textarea.value.length);
+      });
+    }
+
+    // 筛选标签切换
+    const tabs = document.querySelectorAll('.suggestions-tabs button[data-sugg-filter]');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        activeSuggestionFilter = tab.dataset.suggFilter || 'all';
+        renderSuggestions();
+      });
+    });
+
+    // 刷新按钮
+    $('#suggestions-refresh-btn')?.addEventListener('click', () => {
+      loadSuggestions();
+    });
+
+    // 表单提交
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      const checkedRadio = form.querySelector('input[name="sugg-category"]:checked');
+      const category = checkedRadio?.value || 'feature';
+      const content = textarea?.value?.trim() || '';
+      const nickname = $('#suggestion-nickname-input')?.value?.trim() || '';
+      const contact = $('#suggestion-contact-input')?.value?.trim() || '';
+      const isPublic = $('#suggestion-public-checkbox')?.checked ?? true;
+
+      if (!content || content.length < 3) {
+        alert('建议内容至少输入 3 个字哦');
+        return;
+      }
+      if (content.length > 500) {
+        alert('建议内容不能超过 500 个字');
+        return;
+      }
+
+      const submitBtn = $('#suggestion-submit-btn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '正在投递…';
+      }
+
+      try {
+        await api('/campus/suggestions', 'POST', {
+          category,
+          nickname,
+          contact,
+          content,
+          is_public: isPublic
+        });
+
+        showToast('建议已投递！感谢你为班级建言献策 📮');
+        if (textarea) textarea.value = '';
+        if (charCounter) charCounter.textContent = '0';
+        const contactInput = $('#suggestion-contact-input');
+        if (contactInput) contactInput.value = '';
+        await loadSuggestions();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '投递建议 ↗';
+        }
+      }
+    });
+  }
+
+  // ==========================================================================
   // 初始化与监听
   // ==========================================================================
   function init() {
@@ -577,6 +831,8 @@
     setupTeacherForm();
     loadTargets();
     setupTargetArena();
+    loadSuggestions();
+    setupSuggestionForm();
   }
 
   if (document.readyState === 'loading') {

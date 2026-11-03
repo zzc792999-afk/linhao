@@ -67,7 +67,7 @@ export function adminRoutes(db,readJson){
   }
   if(url.pathname==='/api/admin/dashboard'&&req.method==='GET'){
    const page=Math.min(100000,Math.max(0,Number.parseInt(url.searchParams.get('page')||'0',10)||0));
-   const [dash, fun, ext, chEntries, marquee, teachers, reviews, targets, people] = await Promise.all([
+   const [dash, fun, ext, chEntries, marquee, teachers, reviews, targets, suggestions, people] = await Promise.all([
      db.dashboard(page),
      db.fun(owner,classDay()),
      db.extended(owner,new Date().toISOString(),true),
@@ -76,9 +76,10 @@ export function adminRoutes(db,readJson){
      db.teachers(),
      db.adminAllTeacherReviews(),
      db.targets(''),
+     db.adminAllSuggestions(),
      db.people()
    ]);
-   send(200,{...dash,fun,extended:ext,challengeEntries:chEntries,campus:{marquee,teachers,reviews,targets},people});
+   send(200,{...dash,fun,extended:ext,challengeEntries:chEntries,campus:{marquee,teachers,reviews,targets,suggestions},people});
    return true;
   }
   if(url.pathname==='/api/admin/settings'&&req.method==='PUT'){

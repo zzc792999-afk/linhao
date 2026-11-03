@@ -9,7 +9,11 @@ export const campusSchema = [
   `INSERT INTO class_teachers(id, name, subject, date) VALUES('t-math', '张老师', '高等数学', '2026-10-30T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
   `INSERT INTO class_teachers(id, name, subject, date) VALUES('t-ds', '李老师', '数据结构与算法', '2026-10-30T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
   `INSERT INTO class_teachers(id, name, subject, date) VALUES('t-py', '王老师', 'Python程序设计', '2026-10-30T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
-  `INSERT INTO class_marquee(id, text, author, date) VALUES('m-welcome', '欢迎来到 25计算机1 班级互动小站！代码改变世界，青春共同书写。', '班委', '2026-10-30T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`
+  `INSERT INTO class_marquee(id, text, author, date) VALUES('m-welcome', '欢迎来到 25计算机1 班级互动小站！代码改变世界，青春共同书写。', '班委', '2026-10-30T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
+  'CREATE TABLE IF NOT EXISTS class_suggestions(id TEXT PRIMARY KEY, owner TEXT NOT NULL, category TEXT NOT NULL, nickname TEXT NOT NULL, contact TEXT NOT NULL DEFAULT \'\', content TEXT NOT NULL, is_public INTEGER NOT NULL DEFAULT 1, status TEXT NOT NULL DEFAULT \'pending\', reply TEXT NOT NULL DEFAULT \'\', reply_date TEXT, date TEXT NOT NULL)',
+  'CREATE INDEX IF NOT EXISTS class_suggestions_date ON class_suggestions(date DESC)',
+  `INSERT INTO class_suggestions(id, owner, category, nickname, contact, content, is_public, status, reply, reply_date, date) VALUES('sugg-init-1', 'system', 'feature', '极客同学', '', '希望游乐厅增加新游戏或者反应力排行榜能保留前二十名！', 1, 'done', '已经完成升级！游乐厅手速榜与吉祥物小院已全面上线，欢迎常来玩~', '2026-10-31T12:00:00.000Z', '2026-10-30T10:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
+  `INSERT INTO class_suggestions(id, owner, category, nickname, contact, content, is_public, status, reply, reply_date, date) VALUES('sugg-init-2', 'system', 'activity', '课间活动委员', '', '期末考完试后，大家一起拍个全班合影留念吧！', 1, 'adopted', '好主意！班委正在计划期末合影时间与场地，到时候通知全班！', '2026-11-01T15:00:00.000Z', '2026-10-31T09:00:00.000Z') ON CONFLICT(id) DO NOTHING`
 ];
 
 export function campusStore(query) {
@@ -139,6 +143,59 @@ export function campusStore(query) {
         await query('UPDATE class_targets SET throws_count = throws_count + 1 WHERE id=$1', [p.targetId]);
       }
       return inserted;
+    },
+
+    // 4. 班级意见箱 (Class Suggestions Box)
+    suggestions: async owner => {
+      const list = await rows(
+        'SELECT id, category, nickname, content, is_public, status, reply, reply_date, date, ' +
+        'CASE WHEN owner=$1 THEN 1 ELSE 0 END AS mine ' +
+        'FROM class_suggestions WHERE is_public=1 OR owner=$1 ORDER BY date DESC LIMIT 60',
+        [owner]
+      );
+      return list.map(s => ({
+        id: s.id,
+        category: s.category,
+        nickname: s.nickname,
+        content: s.content,
+        is_public: Number(s.is_public) === 1,
+        status: s.status,
+        reply: s.reply || '',
+        reply_date: s.reply_date,
+        date: s.date,
+        mine: !!s.mine
+      }));
+    },
+    addSuggestion: async p => !!(await query(
+      'INSERT INTO class_suggestions(id, owner, category, nickname, contact, content, is_public, status, reply, reply_date, date) ' +
+      'SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11 ' +
+      'WHERE (SELECT COUNT(*) FROM class_suggestions) < 300 ' +
+      'AND (SELECT COUNT(*) FROM class_suggestions WHERE owner=$2 AND date > $12) < 10',
+      [
+        p.id, p.owner, p.category, p.nickname, p.contact, p.content,
+        p.is_public ? 1 : 0, p.status || 'pending', p.reply || '', p.reply_date || null, p.date,
+        new Date(Date.now() - 86400000).toISOString()
+      ]
+    )).rowCount,
+    deleteSuggestion: async (id, owner) => {
+      const clause = owner === undefined ? '' : ' AND owner=$2';
+      return !!(await query(`DELETE FROM class_suggestions WHERE id=$1${clause}`, owner === undefined ? [id] : [id, owner])).rowCount;
+    },
+    adminAllSuggestions: async () => {
+      const list = await rows(
+        'SELECT id, owner, category, nickname, contact, content, is_public, status, reply, reply_date, date ' +
+        'FROM class_suggestions ORDER BY date DESC LIMIT 150'
+      );
+      return list.map(s => ({
+        ...s,
+        is_public: Number(s.is_public) === 1
+      }));
+    },
+    adminReplySuggestion: async (id, { reply, status, reply_date }) => {
+      return !!(await query(
+        'UPDATE class_suggestions SET reply=$1, status=$2, reply_date=$3 WHERE id=$4',
+        [reply, status, reply_date, id]
+      )).rowCount;
     }
   };
 }

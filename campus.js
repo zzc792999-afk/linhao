@@ -203,6 +203,63 @@ export function campusRoutes(db, readJson) {
       return true;
     }
 
+    // 4. 班级意见箱 (Suggestions)
+    if (url.pathname === '/api/campus/suggestions' && req.method === 'GET') {
+      send(200, { suggestions: await db.suggestions(owner) });
+      return true;
+    }
+
+    if (url.pathname === '/api/campus/suggestions' && req.method === 'POST') {
+      const b = await readJson(req);
+      const allowedCategories = ['feature', 'bug', 'activity', 'whisper'];
+      const category = allowedCategories.includes(b.category) ? b.category : 'feature';
+      const nickname = (typeof b.nickname === 'string' && b.nickname.trim()) ? b.nickname.trim().slice(0, 20) : '匿名同学';
+      const contact = typeof b.contact === 'string' ? b.contact.trim().slice(0, 50) : '';
+      const content = typeof b.content === 'string' ? b.content.trim() : '';
+      const is_public = b.is_public !== false && b.is_public !== 0;
+
+      if (!content || content.length < 3 || content.length > 500) {
+        send(400, { error: '请填写意见内容（3–500 字）' });
+        return true;
+      }
+
+      const id = randomBytes(16).toString('hex');
+      const date = new Date().toISOString();
+      const added = await db.addSuggestion({
+        id,
+        owner,
+        category,
+        nickname,
+        contact,
+        content,
+        is_public,
+        status: 'pending',
+        reply: '',
+        reply_date: null,
+        date
+      });
+
+      if (!added) {
+        send(429, { error: '意见箱投递过于频繁或已达系统上限，请稍后再试' });
+        return true;
+      }
+
+      send(201, { ok: true, id, suggestions: await db.suggestions(owner) });
+      return true;
+    }
+
+    const deleteSuggestionRoute = /^\/api\/campus\/suggestions\/([a-f0-9]{32})$/.exec(url.pathname);
+    if (deleteSuggestionRoute && req.method === 'DELETE') {
+      const id = deleteSuggestionRoute[1];
+      const deleted = await db.deleteSuggestion(id, owner);
+      if (!deleted) {
+        send(404, { error: '意见不存在或无权删除' });
+        return true;
+      }
+      send(200, { ok: true, suggestions: await db.suggestions(owner) });
+      return true;
+    }
+
     return false;
   };
 }
@@ -217,7 +274,8 @@ export function campusAdminRoutes(db, readJson) {
         marquee: await db.marqueeMessages(),
         teachers: await db.teachers(),
         reviews: await db.adminAllTeacherReviews(),
-        targets: await db.targets('')
+        targets: await db.targets(''),
+        suggestions: await db.adminAllSuggestions()
       });
       return true;
     }
@@ -287,6 +345,41 @@ export function campusAdminRoutes(db, readJson) {
       await db.deleteTarget(deleteTargetAdminRoute[1]);
       await db.audit(randomBytes(16).toString('hex'), '管理删除靶子图片', deleteTargetAdminRoute[1], new Date().toISOString());
       send(200, { ok: true, targets: await db.targets('') });
+      return true;
+    }
+
+    // GET suggestions
+    if (url.pathname === '/api/admin/campus/suggestions' && req.method === 'GET') {
+      send(200, { suggestions: await db.adminAllSuggestions() });
+      return true;
+    }
+
+    // PUT reply to suggestion
+    const replySuggestionRoute = /^\/api\/admin\/campus\/suggestions\/([a-f0-9]{32})\/reply$/.exec(url.pathname);
+    if (replySuggestionRoute && req.method === 'PUT') {
+      const id = replySuggestionRoute[1];
+      const b = await readJson(req);
+      const reply = typeof b.reply === 'string' ? b.reply.trim().slice(0, 500) : '';
+      const allowedStatus = ['pending', 'adopted', 'done', 'noted'];
+      const status = allowedStatus.includes(b.status) ? b.status : 'noted';
+      const reply_date = reply ? new Date().toISOString() : null;
+
+      const updated = await db.adminReplySuggestion(id, { reply, status, reply_date });
+      if (!updated) {
+        send(404, { error: '意见不存在或已被删除' });
+        return true;
+      }
+      await db.audit(randomBytes(16).toString('hex'), '回复意见箱', id, new Date().toISOString());
+      send(200, { ok: true, suggestions: await db.adminAllSuggestions() });
+      return true;
+    }
+
+    // DELETE suggestion (admin moderation)
+    const deleteSuggestionAdminRoute = /^\/api\/admin\/campus\/suggestions\/([a-f0-9]{32})$/.exec(url.pathname);
+    if (deleteSuggestionAdminRoute && req.method === 'DELETE') {
+      await db.deleteSuggestion(deleteSuggestionAdminRoute[1]);
+      await db.audit(randomBytes(16).toString('hex'), '管理删除意见', deleteSuggestionAdminRoute[1], new Date().toISOString());
+      send(200, { ok: true, suggestions: await db.adminAllSuggestions() });
       return true;
     }
 

@@ -296,6 +296,165 @@
     }
   }
 
+
+  // ==========================================================================
+  // 4. 班级意见箱管理 (Suggestions Box Moderation & Reply)
+  // ==========================================================================
+  async function refreshSuggestions() {
+    const list = $('#manage-suggestions-list');
+    if (!list) return;
+
+    try {
+      const data = await adminApi('/suggestions');
+      const suggestions = data.suggestions || [];
+      const totalBadge = $('#suggestions-total');
+      if (totalBadge) totalBadge.textContent = suggestions.length + ' 条';
+
+      if (!suggestions.length) {
+        list.replaceChildren(el('p', '暂无意见箱投递内容。', 'small-note'));
+        return;
+      }
+
+      const catMap = {
+        feature: '💡 功能建议',
+        bug: '🐛 体验问题',
+        activity: '🏫 班务活动',
+        whisper: '💌 匿名心声'
+      };
+
+      const statusMap = {
+        pending: '⏳ 待处理',
+        adopted: '✨ 已采纳',
+        done: '✓ 已完成',
+        noted: '👀 已阅'
+      };
+
+      list.replaceChildren(...suggestions.map(s => {
+        const item = el('div', undefined, 'admin-row');
+        item.style.padding = '14px 16px';
+        item.style.margin = '10px 0';
+        item.style.border = '1px solid var(--line)';
+        item.style.borderRadius = '8px';
+        item.style.background = 'var(--paper)';
+
+        const head = el('div');
+        head.style.display = 'flex';
+        head.style.justifyContent = 'space-between';
+        head.style.alignItems = 'center';
+        head.style.marginBottom = '8px';
+
+        const badges = el('div');
+        badges.style.display = 'flex';
+        badges.style.gap = '8px';
+        badges.style.alignItems = 'center';
+
+        const catTag = el('span', catMap[s.category] || s.category, 'tag');
+        catTag.style.fontSize = '11px';
+        catTag.style.padding = '2px 8px';
+
+        const pubTag = el('span', s.is_public ? '🌐 公开' : '🔒 私密', 'tag');
+        pubTag.style.fontSize = '11px';
+        pubTag.style.padding = '2px 8px';
+        if (!s.is_public) pubTag.style.background = '#fef3c7';
+
+        const statusTag = el('span', statusMap[s.status] || s.status, 'tag');
+        statusTag.style.fontSize = '11px';
+        statusTag.style.padding = '2px 8px';
+
+        badges.append(catTag, pubTag, statusTag);
+
+        const time = el('small', new Date(s.date).toLocaleString('zh-CN'), 'small-note');
+        head.append(badges, time);
+
+        const subInfo = el('p', '提交人：' + s.nickname + (s.contact ? ' · 联系方式：' + s.contact : ''), 'small-note');
+        subInfo.style.margin = '0 0 6px';
+        subInfo.style.fontWeight = 'bold';
+
+        const content = el('p', s.content);
+        content.style.fontSize = '13px';
+        content.style.lineHeight = '1.6';
+        content.style.margin = '0 0 12px';
+
+        // Reply area
+        const replyArea = el('div');
+        replyArea.style.background = 'var(--bg)';
+        replyArea.style.padding = '10px 14px';
+        replyArea.style.borderRadius = '6px';
+        replyArea.style.margin = '8px 0';
+
+        const replyHead = el('strong', s.reply ? '已回复：' : '撰写官方回复：');
+        replyHead.style.fontSize = '12px';
+        replyHead.style.display = 'block';
+        replyHead.style.marginBottom = '6px';
+
+        const replyInput = el('textarea');
+        replyInput.value = s.reply || '';
+        replyInput.placeholder = '输入给同学的回复（保存后将展示在首页意见回音壁）...';
+        replyInput.rows = 2;
+        replyInput.style.width = '100%';
+        replyInput.style.marginBottom = '8px';
+        replyInput.style.fontSize = '12px';
+
+        const actionRow = el('div');
+        actionRow.style.display = 'flex';
+        actionRow.style.justifyContent = 'space-between';
+        actionRow.style.alignItems = 'center';
+
+        const statusSelect = el('select');
+        statusSelect.style.fontSize = '12px';
+        statusSelect.style.padding = '4px 8px';
+        statusSelect.innerHTML =
+          '<option value="pending"' + (s.status === 'pending' ? ' selected' : '') + '>⏳ 待处理</option>' +
+          '<option value="adopted"' + (s.status === 'adopted' ? ' selected' : '') + '>✨ 已采纳</option>' +
+          '<option value="done"' + (s.status === 'done' ? ' selected' : '') + '>✓ 已完成</option>' +
+          '<option value="noted"' + (s.status === 'noted' ? ' selected' : '') + '>👀 已阅</option>';
+
+        const btnGroup = el('div');
+        btnGroup.style.display = 'flex';
+        btnGroup.style.gap = '8px';
+
+        const saveBtn = el('button', '保存回复与状态 ↗', 'button');
+        saveBtn.style.padding = '6px 14px';
+        saveBtn.style.fontSize = '11px';
+        saveBtn.addEventListener('click', async () => {
+          try {
+            await adminApi('/suggestions/' + s.id + '/reply', 'PUT', {
+              reply: replyInput.value.trim(),
+              status: statusSelect.value
+            });
+            alert('回复与状态已更新！');
+            await refreshSuggestions();
+          } catch (e) {
+            alert(e.message);
+          }
+        });
+
+        const delBtn = el('button', '删除意见', 'button secondary');
+        delBtn.style.padding = '6px 14px';
+        delBtn.style.fontSize = '11px';
+        delBtn.style.color = '#d9635b';
+        delBtn.addEventListener('click', async () => {
+          if (!confirm('确定删除该意见吗？')) return;
+          try {
+            await adminApi('/suggestions/' + s.id, 'DELETE');
+            await refreshSuggestions();
+          } catch (e) {
+            alert(e.message);
+          }
+        });
+
+        btnGroup.append(saveBtn, delBtn);
+        actionRow.append(statusSelect, btnGroup);
+        replyArea.append(replyHead, replyInput, actionRow);
+
+        item.append(head, subInfo, content, replyArea);
+        return item;
+      }));
+    } catch {
+      // 容错
+    }
+  }
+
   // ==========================================================================
   // 绑定折叠展开事件与刷新
   // ==========================================================================
@@ -312,12 +471,16 @@
     $('#campus-admin-targets-fold')?.addEventListener('toggle', e => {
       if (e.target.open) refreshTargets();
     });
+    $('#campus-admin-suggestions-fold')?.addEventListener('toggle', e => {
+      if (e.target.open) refreshSuggestions();
+    });
 
     // 与全局 refresh-admin 同步
     $('#refresh-admin')?.addEventListener('click', () => {
       refreshMarquee();
       refreshTeachers();
       refreshTargets();
+      refreshSuggestions();
     });
   }
 

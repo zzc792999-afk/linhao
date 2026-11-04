@@ -341,12 +341,15 @@
         head.style.display = 'flex';
         head.style.justifyContent = 'space-between';
         head.style.alignItems = 'center';
+        head.style.flexWrap = 'wrap';
+        head.style.gap = '8px';
         head.style.marginBottom = '8px';
 
         const badges = el('div');
         badges.style.display = 'flex';
-        badges.style.gap = '8px';
+        badges.style.gap = '6px';
         badges.style.alignItems = 'center';
+        badges.style.flexWrap = 'wrap';
 
         const catTag = el('span', catMap[s.category] || s.category, 'tag');
         catTag.style.fontSize = '11px';
@@ -399,10 +402,13 @@
         actionRow.style.display = 'flex';
         actionRow.style.justifyContent = 'space-between';
         actionRow.style.alignItems = 'center';
+        actionRow.style.flexWrap = 'wrap';
+        actionRow.style.gap = '10px';
 
         const statusSelect = el('select');
         statusSelect.style.fontSize = '12px';
-        statusSelect.style.padding = '4px 8px';
+        statusSelect.style.padding = '6px 8px';
+        statusSelect.style.minWidth = '110px';
         statusSelect.innerHTML =
           '<option value="pending"' + (s.status === 'pending' ? ' selected' : '') + '>⏳ 待处理</option>' +
           '<option value="adopted"' + (s.status === 'adopted' ? ' selected' : '') + '>✨ 已采纳</option>' +
@@ -412,6 +418,7 @@
         const btnGroup = el('div');
         btnGroup.style.display = 'flex';
         btnGroup.style.gap = '8px';
+        btnGroup.style.flexWrap = 'wrap';
 
         const saveBtn = el('button', '保存回复与状态 ↗', 'button');
         saveBtn.style.padding = '6px 14px';

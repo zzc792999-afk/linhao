@@ -195,7 +195,7 @@ for(const backend of ['sqlite','postgres'])test(backend+': campus marquee, teach
   // 7. Suggestions Box (意见箱)
   const initSugg = await student1('/campus/suggestions');
   assert.equal(initSugg.status, 200);
-  assert.ok(initSugg.data.suggestions.length >= 2);
+  assert.ok(Array.isArray(initSugg.data.suggestions));
 
   // Post public suggestion
   const pubSuggRes = await student1('/campus/suggestions', 'POST', {

@@ -1,0 +1,265 @@
+/* ==========================================================================
+   鸡的特战特效 + 战斗系统 CSS
+   ========================================================================== */
+
+/* 鸡 Lv3 彩虹光晕 */
+.arcade-pet-card[data-arcade-pet="chicken"].chicken-ultimate {
+  border: 2px solid #ffd700!important;
+  box-shadow: 0 0 20px rgba(255,215,0,.55)!important;
+  animation: chickenGlow 1.2s ease-in-out infinite;
+}
+@keyframes chickenGlow {
+  0%,100% { box-shadow: 0 0 20px rgba(255,215,0,.55); }
+  50% { box-shadow: 0 0 36px rgba(255,165,0,.85); }
+}
+
+/* 血条容器 */
+.pet-hp-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0 10px;
+}
+.pet-hp-bar-wrap .pet-hp-label {
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex: none;
+}
+.pet-hp-bar {
+  height: 6px;
+  flex: 1;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+  position: relative;
+}
+.pet-hp-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #57cc99, #80ed99);
+  transition: width .4s ease;
+}
+.pet-hp-bar-fill.low { background: linear-gradient(90deg, #e63946, #ff6b6b); }
+.pet-hp-bar-fill.mid { background: linear-gradient(90deg, #f4a261, #ffb347); }
+.pet-hp-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 36px;
+  text-align: right;
+  flex: none;
+}
+
+/* 伤害飘字 */
+.dmg-pop {
+  position: fixed;
+  z-index: 99999;
+  pointer-events: none;
+  font-size: 22px;
+  font-weight: 900;
+  color: #e63946;
+  text-shadow: 0 2px 6px rgba(0,0,0,.25);
+  animation: dmgFloat 1.1s ease-out forwards;
+}
+.dmg-pop.heal {
+  color: #57cc99;
+  font-size: 18px;
+}
+@keyframes dmgFloat {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-72px) scale(.75); }
+}
+
+/* 眩晕状态旋转 */
+.pet-stunned .pet-portrait > span,
+.pet-stunned .pet-portrait > .mascot-custom-icon {
+  animation: stunSpin 0.8s linear 3;
+}
+@keyframes stunSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 技能攻击按钮 */
+.chicken-attack-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+}
+.chicken-skill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 40px;
+  border: 1.5px solid;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .15s, opacity .15s;
+}
+.chicken-skill-btn:hover { transform: translateY(-2px); }
+.chicken-skill-btn:active { transform: scale(.97); }
+.chicken-skill-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.chicken-skill-btn.basic {
+  background: #fff9e6;
+  color: #b8860b;
+  border-color: #f4c842;
+}
+.dark .chicken-skill-btn.basic {
+  background: rgba(244,200,66,.12);
+  color: #f4c842;
+}
+.chicken-skill-btn.charge {
+  background: #fff0f0;
+  color: #c0392b;
+  border-color: #e74c3c;
+}
+.dark .chicken-skill-btn.charge {
+  background: rgba(231,76,60,.12);
+  color: #e74c3c;
+}
+.chicken-skill-btn.aoe {
+  background: linear-gradient(90deg, #fff9e6, #fff0f0);
+  color: #7d3c98;
+  border-color: #9b59b6;
+  font-size: 12px;
+}
+.dark .chicken-skill-btn.aoe {
+  background: rgba(155,89,182,.12);
+  color: #c39bd3;
+}
+
+/* 技能冷却计时器 */
+.skill-cooldown {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 4px;
+  min-height: 14px;
+}
+
+/* 敲木鱼 */
+.muyu-section {
+  margin-top: 30px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  padding: 26px;
+  text-align: center;
+}
+.muyu-bowl {
+  font-size: 72px;
+  cursor: pointer;
+  display: inline-block;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform .08s;
+}
+.muyu-bowl:active { transform: scale(.88); }
+.muyu-bowl.hit { animation: muyuBounce .22s ease; }
+@keyframes muyuBounce {
+  0%,100% { transform: scale(1); }
+  40% { transform: scale(.82) rotate(-6deg); }
+  70% { transform: scale(1.12) rotate(3deg); }
+}
+.muyu-merit {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--ink);
+  margin: 8px 0 4px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+.muyu-merit-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.muyu-float-list {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 99998;
+}
+.muyu-float {
+  position: fixed;
+  pointer-events: none;
+  font-size: 16px;
+  font-weight: 800;
+  color: #b8860b;
+  text-shadow: 0 2px 6px rgba(0,0,0,.2);
+  animation: muyuFloat 1.3s ease-out forwards;
+}
+@keyframes muyuFloat {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  80% { opacity: .7; }
+  100% { opacity: 0; transform: translateY(-90px) scale(.8); }
+}
+.muyu-today-count {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.muyu-share-btn {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 12px;
+}
+.muyu-share-btn:hover { border-color: var(--ink); }
+
+/* 玄学蒙题器 */
+.kaoshi-oracle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 14px auto 0;
+  border: 2px dashed #9b59b6;
+  background: transparent;
+  color: #7d3c98;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s;
+}
+.kaoshi-oracle-btn:hover { background: rgba(155,89,182,.08); }
+.dark .kaoshi-oracle-btn { color: #c39bd3; border-color: #c39bd3; }
+.oracle-result {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-left: 3px solid #9b59b6;
+  border-radius: 6px;
+  background: rgba(155,89,182,.07);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  min-height: 52px;
+  font-style: italic;
+}
+
+@media (max-width: 600px) {
+  .muyu-section { padding: 18px; }
+  .muyu-bowl { font-size: 58px; }
+  .muyu-merit { font-size: 26px; }
+  .chicken-attack-btns { gap: 6px; }
+  .chicken-skill-btn { min-height: 38px; font-size: 10px; }
+}

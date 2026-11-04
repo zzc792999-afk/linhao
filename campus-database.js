@@ -11,9 +11,7 @@ export const campusSchema = [
   `INSERT INTO class_teachers(id, name, subject, date) VALUES('t-py', '王老师', 'Python程序设计', '2026-10-30T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
   `INSERT INTO class_marquee(id, text, author, date) VALUES('m-welcome', '欢迎来到 25计算机1 班级互动小站！代码改变世界，青春共同书写。', '班委', '2026-10-30T00:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
   'CREATE TABLE IF NOT EXISTS class_suggestions(id TEXT PRIMARY KEY, owner TEXT NOT NULL, category TEXT NOT NULL, nickname TEXT NOT NULL, contact TEXT NOT NULL DEFAULT \'\', content TEXT NOT NULL, is_public INTEGER NOT NULL DEFAULT 1, status TEXT NOT NULL DEFAULT \'pending\', reply TEXT NOT NULL DEFAULT \'\', reply_date TEXT, date TEXT NOT NULL)',
-  'CREATE INDEX IF NOT EXISTS class_suggestions_date ON class_suggestions(date DESC)',
-  `INSERT INTO class_suggestions(id, owner, category, nickname, contact, content, is_public, status, reply, reply_date, date) VALUES('sugg-init-1', 'system', 'feature', '极客同学', '', '希望游乐厅增加新游戏或者反应力排行榜能保留前二十名！', 1, 'done', '已经完成升级！游乐厅手速榜与吉祥物小院已全面上线，欢迎常来玩~', '2026-10-31T12:00:00.000Z', '2026-10-30T10:00:00.000Z') ON CONFLICT(id) DO NOTHING`,
-  `INSERT INTO class_suggestions(id, owner, category, nickname, contact, content, is_public, status, reply, reply_date, date) VALUES('sugg-init-2', 'system', 'activity', '课间活动委员', '', '期末考完试后，大家一起拍个全班合影留念吧！', 1, 'adopted', '好主意！班委正在计划期末合影时间与场地，到时候通知全班！', '2026-11-01T15:00:00.000Z', '2026-10-31T09:00:00.000Z') ON CONFLICT(id) DO NOTHING`
+  'CREATE INDEX IF NOT EXISTS class_suggestions_date ON class_suggestions(date DESC)'
 ];
 
 export function campusStore(query) {

@@ -22,10 +22,10 @@ export const mascots=[
   {
     id:'chicken',baseName:'鸡',name:'鸡',emoji:'🐔',
     forms:[
-      {name:'小雏鸡',emoji:'🐥',motto:'元气上线，破壳就发光。'},
-      {name:'战斗大公鸡',emoji:'🐔',motto:'雄鸡一唱，早起敲代码。'},
-      {name:'凤凰锦雉',emoji:'🦚',motto:'涅槃进阶，一身华羽！'},
-      {name:'太阳神鸟',emoji:'🔥',motto:'光芒万丈，全场焦点！'}
+      {name:'练习生雏鸡',emoji:'🐥',motto:'元气上线，练习时长刚满两天半。'},
+      {name:'中分背带鸡',emoji:'🐔',motto:'梳中分头、背带裤，雄鸡一唱代码全绿。'},
+      {name:'唱跳霸王鸡',emoji:'🕺',motto:'掌握铁山靠，巅峰产生虚伪的拥护！'},
+      {name:'只因神尊·IKUN',emoji:'⚡',motto:'黄昏见证虔诚的信徒，全场光芒万丈！'}
     ]
   },
   {

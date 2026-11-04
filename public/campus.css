@@ -794,7 +794,8 @@ body.dark .category-radio:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 10px;
 }
 
@@ -850,6 +851,8 @@ body.dark .suggestion-reply-box {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 4px;
 }
 
@@ -899,6 +902,14 @@ body.dark .suggestion-reply-badge {
   .suggestions-container {
     grid-template-columns: 1fr;
   }
+  .suggestion-form-card,
+  .suggestions-wall-card {
+    padding: 16px;
+  }
+  .suggestion-form-head h3,
+  .suggestions-wall-head h3 {
+    font-size: 17px;
+  }
 }
 
 @media (max-width: 500px) {
@@ -906,9 +917,29 @@ body.dark .suggestion-reply-badge {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+  .category-radio {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
   .suggestion-meta-row {
     grid-template-columns: 1fr;
     gap: 10px;
+  }
+  .suggestions-tabs {
+    gap: 6px;
+  }
+  .suggestions-tabs button {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .suggestion-card {
+    padding: 12px 14px;
+  }
+  .suggestions-section {
+    padding-top: 24px;
+  }
+  .suggestions-list {
+    max-height: 420px;
   }
 }
 

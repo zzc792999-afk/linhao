@@ -232,11 +232,18 @@ if (backToTopBtn) {
     const bottomMap = {
       'home': 'home',
       'mobile-portals': 'home',
+      'people': 'home',
+      'messages': 'square',
+      'social-area': 'square',
+      'playground': 'meme-lab',
       'arcade': 'arcade',
-      'targets': 'targets',
-      'teachers': 'teachers',
-      'messages': 'messages',
-      'album': 'messages'
+      'mascots': 'arcade',
+      'targets': 'arcade',
+      'album': 'album',
+      'class-film': 'album',
+      'teachers': 'my-space',
+      'suggestions': 'my-space',
+      'class-tools': 'my-space'
     };
     const bottomKey = bottomMap[activeId] || '';
     if (bottomKey) {

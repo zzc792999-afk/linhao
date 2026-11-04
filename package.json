@@ -10,6 +10,7 @@
     "start": "node --env-file-if-exists=.env server.js",
     "test": "node --test",
     "db:check": "node --env-file-if-exists=.env scripts/check-database.js",
+    "db:backup": "node scripts/backup.js",
     "db:migrate-desk": "node --env-file-if-exists=.env scripts/migrate-class-desk.js",
     "db:migrate-arcade": "node --env-file-if-exists=.env scripts/migrate-arcade.js",
     "db:migrate-campus": "node --env-file-if-exists=.env scripts/migrate-campus.js"

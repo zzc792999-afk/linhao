@@ -711,3 +711,453 @@ body.dark .mj-note-pill:active {
   color: #1a1a1a;
 }
 
+
+
+/* ==========================================================================
+   2.0 Magazine Layout & Editorial Components (Cream-White Young Internet Style)
+   ========================================================================== */
+.hero-sublead {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 12px 0 18px;
+}
+
+.hero-pill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.paper-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.pill-dot.lime   { background: var(--accent-lime); }
+.pill-dot.coral  { background: var(--accent-coral); }
+.pill-dot.pink   { background: var(--accent-pink); }
+.pill-dot.yellow { background: var(--accent-yellow); }
+.pill-dot.blue   { background: var(--accent-blue); }
+.pill-dot.purple { background: var(--accent-purple); }
+
+.hero-stamp {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  border: 1px dashed var(--ink);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.home-magazine-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 6% 40px;
+}
+
+.magazine-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 24px;
+}
+
+.magazine-primary,
+.magazine-secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Individual Magazine Card */
+.mag-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.mag-card:hover {
+  border-color: #cac5bb;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.mag-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 10px monospace;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 14px;
+}
+
+.mag-card-badge.tag-lime   { background: #eef6da; color: #395213; border: 1px solid #d5e6a8; }
+.mag-card-badge.tag-coral  { background: #ffece8; color: #7a2315; border: 1px solid #fec7be; }
+.mag-card-badge.tag-yellow { background: #fdf6dc; color: #574606; border: 1px solid #fae69e; }
+.mag-card-badge.tag-pink   { background: #fbebf1; color: #691d3d; border: 1px solid #f5c7da; }
+.mag-card-badge.tag-purple { background: #f3effb; color: #3d216d; border: 1px solid #dcd1f6; }
+
+body.dark .mag-card-badge.tag-lime   { background: #26331a; color: #d6eab0; border-color: #3f582c; }
+body.dark .mag-card-badge.tag-coral  { background: #381f1c; color: #ffab9e; border-color: #63302b; }
+body.dark .mag-card-badge.tag-yellow { background: #36301a; color: #f9e29a; border-color: #5c4e24; }
+body.dark .mag-card-badge.tag-pink   { background: #381f2b; color: #f6bdd5; border-color: #613049; }
+body.dark .mag-card-badge.tag-purple { background: #291e3d; color: #dcd0f7; border-color: #4b3670; }
+
+.badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mag-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.mag-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.mag-text-jump {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.mag-text-jump:hover {
+  color: var(--ink);
+}
+
+/* Today's Topic */
+.mag-topic-title {
+  font-size: 19px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  line-height: 1.4;
+  letter-spacing: -0.4px;
+}
+
+.mag-topic-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 0 0 16px;
+}
+
+.mag-topic-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mag-btn-sm {
+  padding: 10px 18px;
+  font-size: 11px;
+}
+
+.mag-topic-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.topic-tag {
+  font-size: 11px;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* Live Feed / Moments Preview */
+.mag-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.preview-avatar {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.preview-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-author {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.preview-text {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+}
+
+.preview-arrow {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.preview-arrow:hover {
+  color: var(--ink);
+}
+
+/* Events List */
+.mag-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mag-event-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.event-tag {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.event-tag.lime { background: var(--accent-lime); color: #1f3011; }
+.event-tag.blue { background: var(--accent-blue); color: #0d2b40; }
+
+.event-title {
+  flex: 1;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-time {
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Meme Lab Highlight */
+.mag-meme-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mag-meme-sticker {
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  position: relative;
+}
+
+.meme-sticker-label {
+  font: 10px monospace;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.meme-preview-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.meme-art-symbol {
+  font-size: 28px;
+}
+
+.meme-art-caption {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  font-style: italic;
+}
+
+.mag-meme-tip {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.mag-meme-btn {
+  align-self: flex-start;
+  padding: 10px 18px;
+  font-size: 11px;
+}
+
+/* Games Grid */
+.mag-games-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.mag-games-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.mag-game-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px 6px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  min-height: 44px;
+}
+
+.mag-game-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--ink);
+}
+
+.mag-game-icon {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.mag-game-name {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mag-game-tile small {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* Quick Strip at bottom of magazine */
+.mag-quick-strip {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.mag-strip-head {
+  margin-bottom: 12px;
+}
+
+.mag-strip-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mag-strip-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  min-height: 44px;
+}
+
+.mag-strip-pill:hover {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.pill-emoji {
+  font-size: 14px;
+}
+
+/* Mobile Media Queries for Magazine Section */
+@media (max-width: 850px) {
+  .magazine-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .mag-card {
+    padding: 18px 16px;
+  }
+  .mag-games-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .home-magazine-section {
+    padding: 16px 4% 28px;
+  }
+}
+
+@media (max-width: 500px) {
+  .mag-games-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

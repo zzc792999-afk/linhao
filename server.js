@@ -2,6 +2,7 @@ import {socialRoutes} from './social.js';
 import {boardRoutes} from './board.js';
 import {arcadeRoutes} from './arcade.js';
 import {campusRoutes} from './campus.js';
+import {memeRoutes} from './meme.js';
 import {adminRoutes,classDay} from './admin.js';
 import http from 'node:http';
 import sharp from 'sharp';
@@ -22,6 +23,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
   const board=boardRoutes(db,req=>readJson(req,4096));
   const arcade=arcadeRoutes(db,req=>readJson(req,180000));
   const campus=campusRoutes(db,req=>readJson(req,180000));
+  const meme=memeRoutes(db,req=>readJson(req,4*1024*1024));
   const rates = new Map();
   let processingPhotos=0;
   const server = http.createServer(async (req, res) => {
@@ -44,7 +46,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         const pathname = decodeURIComponent(url.pathname);
         const relative = pathname === '/' ? 'index.html' : ['/admin','/admin/'].includes(pathname) ? 'admin.html' : pathname.slice(1);
         // Only serve explicit public files, never the database or server source.
-        if (!['index.html','admin.html','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','chicken-battle.css','chicken-battle.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/rednose-classmate.svg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
+        if (!['index.html','admin.html','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','chicken-battle.css','chicken-battle.js','meme-lab.css','meme-lab.js','fun.js','app.js','style.css','assets/p1.jpg','assets/p2.jpg','assets/p3.jpg','assets/rednose-classmate.svg','assets/class-film.mp4'].includes(relative)) return send(404,{error:'页面不存在'});
         let content = readFileSync(path.join(publicRoot, relative));
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
@@ -87,6 +89,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       if(await board(req,res,url,owner,send))return;
       if(await arcade(req,res,url,owner,send))return;
       if(await campus(req,res,url,owner,send))return;
+      if(await meme(req,res,url,owner,send))return;
       if(req.method==='GET'&&url.pathname==='/api/fun')return send(200,await db.fun(owner,classDay()));
       if(req.method==='PUT'&&url.pathname==='/api/checkin'){
         const body=await readJson(req);

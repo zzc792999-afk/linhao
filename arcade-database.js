@@ -233,18 +233,29 @@ export function arcadeStore(query){
     arcadeSaveProfile:(owner,name,mascot)=>query('INSERT INTO class_arcade_profiles(owner,name,mascot) VALUES($1,$2,$3) ON CONFLICT(owner) DO UPDATE SET name=excluded.name,mascot=excluded.mascot',[owner,name,mascot]),
     arcadeFeed:(day,owner,mascot)=>query('INSERT INTO class_arcade_feeds(day,owner,mascot) VALUES($1,$2,$3) ON CONFLICT(day,owner,mascot) DO NOTHING',[day,owner,mascot]),
     async arcadeState(owner,day){
-      const [me,totals,fed,best,reactionLeaderboard,drawings]=await Promise.all([
+      const [me,totals,fed,best,reactionLeaderboard,drawings,statsRow]=await Promise.all([
         profile(owner),rows('SELECT mascot,COUNT(*) AS n FROM class_arcade_feeds GROUP BY mascot'),
         rows('SELECT mascot FROM class_arcade_feeds WHERE day=$1 AND owner=$2',[day,owner]),
         rows('SELECT score FROM class_arcade_scores WHERE owner=$1',[owner]),scores(owner),
-        rows('SELECT '+drawingColumns+' FROM class_arcade_drawings d LEFT JOIN class_arcade_guesses g ON g.drawing=d.id AND g.owner=$1 WHERE d.deleted=0 ORDER BY d.date DESC,d.id DESC LIMIT 100',[owner])
+        rows('SELECT '+drawingColumns+' FROM class_arcade_drawings d LEFT JOIN class_arcade_guesses g ON g.drawing=d.id AND g.owner=$1 WHERE d.deleted=0 ORDER BY d.date DESC,d.id DESC LIMIT 100',[owner]),
+        rows('SELECT value FROM class_settings WHERE key=$1',['mascot_battle_stats'])
       ]);
+      let stats={};
+      try{stats=JSON.parse(statsRow[0]?.value||'{}')}catch{}
+      const penalties=stats.feedPenalties||{};
+      const hitsMap=stats.hitsReceived||{};
+      const todayAttacksMap=(stats.attacksToday||{})[day]||{};
       const pets=mascots.map(m=>{
-        const feeds=Number(totals.find(t=>t.mascot===m.id)?.n||0);
+        const rawFeeds=Number(totals.find(t=>t.mascot===m.id)?.n||0);
+        const penalty=Math.max(0,Number(penalties[m.id]||0));
+        const feeds=Math.max(0,rawFeeds-penalty);
         const formIdx=Math.min(m.forms.length-1,Math.floor(feeds/10));
         const currentForm=m.forms[formIdx];
         const nextForm=m.forms[formIdx+1]||null;
         const isMaxLevel=formIdx>=m.forms.length-1;
+        const todayAttacks=Number(todayAttacksMap[m.id]||0);
+        const remainingAttacks=Math.max(0,3-todayAttacks);
+        const hitsReceived=Number(hitsMap[m.id]||0);
         return {
           id:m.id,
           baseName:m.baseName,
@@ -253,6 +264,7 @@ export function arcadeStore(query){
           image:currentForm.image||m.image,
           motto:currentForm.motto,
           feeds,
+          rawFeeds,
           formIndex:formIdx,
           level:1+Math.floor(feeds/10),
           isMaxLevel,
@@ -262,7 +274,11 @@ export function arcadeStore(query){
           needed:10,
           fed:fed.some(f=>f.mascot===m.id),
           forms:m.forms,
-          nextForm:nextForm?nextForm.name:null
+          nextForm:nextForm?nextForm.name:null,
+          todayAttacks,
+          remainingAttacks,
+          hitsReceived,
+          hitsNeeded:3
         };
       });
       return {day,pets,my:{...me,stickerCount:fed.length,bestReaction:best[0]?Number(best[0].score):null},reactionLeaderboard,drawings:drawings.map(mapDrawing)};

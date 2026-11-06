@@ -451,4 +451,33 @@
   border-radius: 50%;
 }
 
+/* 受击计数与降级风险警示 */
+.pet-hit-note {
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-align: center;
+  margin: 4px 0 8px;
+}
+.pet-hit-note.warn {
+  color: #e67e22;
+  border-color: #e67e22;
+  background: rgba(230, 126, 34, 0.08);
+}
+.pet-hit-note.danger {
+  color: #e74c3c;
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.12);
+  font-weight: 700;
+  animation: pulseDanger 1.2s ease-in-out infinite;
+}
+@keyframes pulseDanger {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+
 

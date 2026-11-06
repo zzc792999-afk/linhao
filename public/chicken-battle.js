@@ -148,7 +148,8 @@
     const box = el('div', undefined, 'attack-modal-box');
 
     const h3 = el('h3', `⚔️ 释放【${attackerPet.skillName || '专属攻击'}】`);
-    const hint = el('p', `攻击方：${attackerPet.name}（Lv.${attackerPet.level} 巅峰形态） · 伤害值：${attackerPet.skillDamage || 20} HP`, 'small-note');
+    const leftAttacks = attackerPet.remainingAttacks != null ? attackerPet.remainingAttacks : 3;
+    const hint = el('p', `攻击方：${attackerPet.name}（Lv.${attackerPet.level} 巅峰形态） · 今日剩余攻击机会：${leftAttacks}/3 次 · 伤害值：${attackerPet.skillDamage || 20} HP`, 'small-note');
     const secureHint = el('p', '🛡️ 为防止他人滥用或冒用攻击，请输入管理员设置的授权密码。', 'small-note');
     secureHint.style.color = '#e67e22';
 
@@ -156,7 +157,7 @@
     const targetLabel = el('label', '选择攻击目标：');
     const targetSelect = el('select');
     allPets.filter(p => p.id !== attackerPet.id).forEach(p => {
-      const opt = el('option', `${p.name} (当前精力：${getMascotHp(p.id)} HP)`);
+      const opt = el('option', `${p.name} (当前精力：${getMascotHp(p.id)} HP · 累计受击 ${p.hitsReceived || 0}/3 次)`);
       opt.value = p.id;
       targetSelect.append(opt);
     });
@@ -241,10 +242,24 @@
           setTimeout(() => attackerCard.classList.remove('pet-feed-pop'), 900);
         }
 
+        if (data.levelDropped) {
+          playThunderSound();
+          if (targetCard) {
+            showDmgPop(targetCard, '⚠️ 连续受击3次，等级-1！快给它投票！');
+            targetCard.classList.add('pet-stunned');
+            setTimeout(() => targetCard.classList.remove('pet-stunned'), 2800);
+          }
+        }
+
         const statusEl = $('#arcade-status');
         if (statusEl) {
-          statusEl.textContent = `⚔️【${data.attacker}】施展【${data.skill}】！击中【${data.target}】，扣除 ${data.damage} 点精力！目标剩余 ${data.targetHp} HP。`;
+          statusEl.textContent = data.log || `⚔️【${data.attacker}】施展【${data.skill}】！击中【${data.target}】，扣除 ${data.damage} 点精力！目标剩余 ${data.targetHp} HP。`;
         }
+
+        // 自动触发游乐厅刷新同步最新成长等级与受击次数
+        setTimeout(() => {
+          document.querySelector('#arcade-refresh')?.click();
+        }, 500);
       } catch (err) {
         errText.textContent = `❌ ${err.message}`;
         submitBtn.disabled = false;
@@ -274,11 +289,15 @@
       const skillName = card.dataset.skillName || '专属攻击';
       const skillDesc = card.dataset.skillDesc || '';
       const skillDamage = parseInt(card.dataset.skillDamage || '20', 10);
-      return { id, isMaxLevel, level, name, skillName, skillDesc, skillDamage, card };
+      const remainingAttacks = parseInt(card.dataset.remainingAttacks != null ? card.dataset.remainingAttacks : '3', 10);
+      const todayAttacks = parseInt(card.dataset.todayAttacks || '0', 10);
+      const hitsReceived = parseInt(card.dataset.hitsReceived || '0', 10);
+      const hitsNeeded = parseInt(card.dataset.hitsNeeded || '3', 10);
+      return { id, isMaxLevel, level, name, skillName, skillDesc, skillDamage, remainingAttacks, todayAttacks, hitsReceived, hitsNeeded, card };
     });
 
     petsMeta.forEach(pet => {
-      const { card, id, isMaxLevel, skillName, skillDamage } = pet;
+      const { card, id, isMaxLevel, skillName, skillDamage, remainingAttacks, todayAttacks } = pet;
 
       // 1. HP Bar
       if (!card.querySelector('.pet-hp-bar-wrap')) {
@@ -323,9 +342,12 @@
 
       if (isMaxLevel) {
         card.classList.add('pet-max-unlocked');
-        const attackBtn = el('button', `⚔️ 释放【${skillName}】`, 'mascot-attack-btn');
+        const attackBtn = el('button', remainingAttacks > 0 ? `⚔️ 释放【${skillName}】(剩${remainingAttacks}次)` : `⚔️ 今日攻击已达上限 (3/3)`, 'mascot-attack-btn');
         attackBtn.type = 'button';
-        attackBtn.title = `对其他吉祥物造成 ${skillDamage} 点体力伤害（需输入管理密码）`;
+        attackBtn.disabled = remainingAttacks <= 0;
+        attackBtn.title = remainingAttacks > 0
+          ? `今日已攻击 ${todayAttacks}/3 次 · 对其他吉祥物造成 ${skillDamage} 点体力伤害（需输入管理密码）`
+          : '每个吉祥物每日限发动 3 次攻击，今日次数已用尽';
         attackBtn.addEventListener('click', e => {
           e.stopPropagation();
           openAttackModal(pet, petsMeta);

@@ -68,7 +68,23 @@ for(const backend of ['sqlite','postgres'])test(backend+': arcade feeding, score
   assert.equal((await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'shoe',password:'secret-shoe'})).status,400);
   const attackSuccess=await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'liubang',password:'secret-shoe'});
   assert.equal(attackSuccess.status,200);assert.equal(attackSuccess.data.damage,35);assert.equal(attackSuccess.data.targetHp,65);
+  assert.equal(attackSuccess.data.attackerRemainingAttacks,2);assert.equal(attackSuccess.data.targetHitsReceived,1);assert.equal(attackSuccess.data.levelDropped,false);
   assert.equal((await artist('/arcade/mascot-hps')).data.hps.liubang,65);
+  // Feed liubang to 20 feeds (Lv.3)
+  for(let i=0;i<20;i++)await store.arcadeFeed('2000-01-04','lb-feeder-'+i,'liubang');
+  let lbPet=(await artist('/arcade')).data.pets.find(p=>p.id==='liubang');assert.equal(lbPet.level,3);
+  // 2nd attack from shoe
+  const attack2=await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'liubang',password:'secret-shoe'});
+  assert.equal(attack2.status,200);assert.equal(attack2.data.attackerRemainingAttacks,1);assert.equal(attack2.data.targetHitsReceived,2);
+  // 3rd attack from shoe -> triggers level drop for liubang (3 hits reached)
+  const attack3=await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'liubang',password:'secret-shoe'});
+  assert.equal(attack3.status,200);assert.equal(attack3.data.attackerRemainingAttacks,0);assert.equal(attack3.data.targetHitsReceived,0);assert.equal(attack3.data.levelDropped,true);
+  lbPet=(await artist('/arcade')).data.pets.find(p=>p.id==='liubang');assert.equal(lbPet.level,2);
+  // 4th attack from shoe today is rejected (max 3 attacks per mascot per day)
+  assert.equal((await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'liubang',password:'secret-shoe'})).status,429);
+  // Classmates vote/feed liubang 10 times -> levels back up to Lv.3!
+  for(let i=0;i<10;i++)await store.arcadeFeed('2000-01-05','lb-restore-'+i,'liubang');
+  lbPet=(await artist('/arcade')).data.pets.find(p=>p.id==='liubang');assert.equal(lbPet.level,3);
   assert.equal((await store.notes('test'))[0].text,'原留言');assert.equal(await store.setting('announcement'),'原公告');if(engine)await postgresStore(pool);assert.equal((await other('/arcade')).data.drawings.length,0);
   for(const route of ['/arcade.js','/arcade-database.js','/scripts/migrate-arcade.js'])assert.equal((await fetch(base+route)).status,404);await admin('/admin/logout','POST');assert.equal((await admin('/admin/arcade')).status,401);
  }finally{if(old===undefined)delete process.env.ADMIN_PASSWORD_HASH;else process.env.ADMIN_PASSWORD_HASH=old;if(server?.listening)await new Promise(r=>{server.close(r);server.closeAllConnections()});secondaryClose?.();await engine?.close();await rm(dir,{recursive:true,force:true})}

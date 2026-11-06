@@ -45,6 +45,18 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
    send(400,{error:`【${attacker.baseName}】尚未达到巅峰满级（Lv.${attacker.forms.length}），无法解锁攻击技能！快去投喂升级吧~`});
    return true;
   }
+  let stats={};
+  try{stats=JSON.parse(await db.setting('mascot_battle_stats','{}')||'{}')}catch{}
+  stats.attacksToday||={};
+  stats.attacksToday[day]||={};
+  stats.hitsReceived||={};
+  stats.feedPenalties||={};
+
+  const todayAttacks=Number(stats.attacksToday[day][attacker.id]||0);
+  if(todayAttacks>=3){
+   send(429,{error:`【${petState.name}】今日攻击次数已达上限（3/3 次），每天每个吉祥物限发动 3 次攻击，明天再战吧！`});
+   return true;
+  }
   let passwords={};
   try{passwords=JSON.parse(await db.setting('mascot_attack_passwords','{}')||'{}')}catch{}
   const expectedPassword=(passwords[attacker.id]||'2501').trim();
@@ -53,6 +65,24 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
    send(403,{error:`【${attacker.baseName}】专属攻击密码错误！请向管理员索取正确密码，防止他人滥用你的吉祥物攻击别人！`});
    return true;
   }
+  stats.attacksToday[day][attacker.id]=todayAttacks+1;
+  const newAttacksLeft=Math.max(0,3-(todayAttacks+1));
+
+  // Hit target and check for 3-hits level drop
+  const hits=(Number(stats.hitsReceived[target.id]||0))+1;
+  let levelDropped=false;
+  const targetPetBefore=currentState.pets.find(p=>p.id===target.id);
+  if(hits>=3){
+   stats.hitsReceived[target.id]=0;
+   if(targetPetBefore&&targetPetBefore.feeds>0){
+    stats.feedPenalties[target.id]=(Number(stats.feedPenalties[target.id]||0))+10;
+    levelDropped=true;
+   }
+  }else{
+   stats.hitsReceived[target.id]=hits;
+  }
+  await db.saveSetting('mascot_battle_stats',JSON.stringify(stats));
+
   let hps={};
   try{hps=JSON.parse(await db.setting('mascot_hps','{}')||'{}')}catch{}
   const currentHp=typeof hps[target.id]==='number'?hps[target.id]:100;
@@ -62,6 +92,8 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
   await db.saveSetting('mascot_hps',JSON.stringify(hps));
   const fullHps={};
   for(const m of mascots)fullHps[m.id]=typeof hps[m.id]==='number'?hps[m.id]:100;
+  const targetPetAfterState=await state();
+  const targetPetAfter=targetPetAfterState.pets.find(p=>p.id===target.id);
   send(200,{
    ok:true,
    attackerId:attacker.id,
@@ -75,7 +107,15 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
    target:currentState.pets.find(p=>p.id===target.id)?.name||target.baseName,
    targetName:currentState.pets.find(p=>p.id===target.id)?.name||target.baseName,
    hps:fullHps,
-   log:`⚔️【${petState.name}】输入密码验证成功，释放神技【${attacker.attackSkill?.name}】，对${target.baseName}造成了 ${damage} 点巨额伤害！`
+   attackerRemainingAttacks:newAttacksLeft,
+   targetHitsReceived:stats.hitsReceived[target.id]||0,
+   targetHitsNeeded:3,
+   levelDropped,
+   targetLevel:targetPetAfter?.level,
+   targetFormName:targetPetAfter?.name,
+   log:levelDropped
+    ?`💥【${petState.name}】释放【${attacker.attackSkill?.name}】！【${target.baseName}】累计遭受 3 次重击，等级下降 1 级（变为 Lv.${targetPetAfter?.level} · ${targetPetAfter?.name}）！需要同学们重新投票投喂来为它升级！`
+    :`⚔️【${petState.name}】释放【${attacker.attackSkill?.name}】，对【${target.baseName}】造成了 ${damage} 点巨额伤害！（目标当前承受攻击 ${stats.hitsReceived[target.id]}/3 次，被击中 3 次将降级）`
   });
   return true;
  }

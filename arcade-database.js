@@ -194,15 +194,15 @@ export const mascots=[
     ]
   },
   {
-    id:'liubang',baseName:'刘邦',name:'刘邦',emoji:'👑',
+    id:'liubang',baseName:'刘邦',name:'刘邦',emoji:'👑',image:'/assets/liubang-1.jpg',
     attackSkill:{name:'赤霄神剑斩白蛇',icon:'🗡️',damage:40,desc:'拔出三尺赤霄神剑斩断白蛇，造成40点帝王至尊伤害！'},
     forms:[
-      {name:'泗水亭长刘季',emoji:'🎋',motto:'不拘小节，仗义疏财，结交天下豪杰。'},
-      {name:'斩蛇起义沛公',emoji:'🗡️',motto:'芒砀山拔剑斩白蛇，顺天应人破秦关。'},
-      {name:'约法三章汉王',emoji:'📜',motto:'除苛法抚黎民，广纳三杰聚四海人心。'},
-      {name:'垓下决胜汉高帝',emoji:'🚩',motto:'四面楚歌定乾坤，汉家威名传万古。'},
-      {name:'大风起兮真龙天子',emoji:'🐉',motto:'大风起兮云飞扬，威加海内兮归故乡！'},
-      {name:'万古汉魂·汉高祖神尊',emoji:'👑',motto:'安得猛士兮守四方！护佑 25计算机1班 威震四海！'}
+      {name:'泗水亭长刘季',emoji:'👑',image:'/assets/liubang-1.jpg',motto:'【双面君主】不拘小节，仗义疏财，结交天下豪杰。'},
+      {name:'斩蛇起义沛公',emoji:'⚔️',image:'/assets/liubang-2.jpg',motto:'【圣殿之光】金甲圣光护体，拔剑斩白蛇，顺天应人破秦关。'},
+      {name:'约法三章汉王',emoji:'🗡️',image:'/assets/liubang-3.jpg',motto:'【剑破天穹】青锋破空剑气如虹，除苛法抚黎民，聚四海人心。'},
+      {name:'垓下决胜汉高帝',emoji:'📜',image:'/assets/liubang-4.jpg',motto:'【妙算神机】运筹帷幄之中，四面楚歌定乾坤，汉家威名传万古。'},
+      {name:'大风起兮真龙天子',emoji:'🧭',image:'/assets/liubang-5.jpg',motto:'【夺宝奇兵】秘宝神钥在手，大风起兮云飞扬，威加海内兮归故乡！'},
+      {name:'万古汉魂·汉高祖神尊',emoji:'👑',image:'/assets/liubang-1.jpg',motto:'【五位一体】安得猛士兮守四方！护佑 25计算机1班 威震四海！'}
     ]
   }
 ];

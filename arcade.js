@@ -27,6 +27,58 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
   try{await db.saveSetting('panda_cat_intimate','0')}catch{}
   send(200,{ok:true,intimate:true,duration:60});return true;
  }
+ if(route==='/api/arcade/mascot-hps'&&req.method==='GET'){
+  let saved={};try{saved=JSON.parse(await db.setting('mascot_hps','{}')||'{}')}catch{}
+  const hps={};
+  for(const m of mascots)hps[m.id]=typeof saved[m.id]==='number'?saved[m.id]:100;
+  send(200,{hps});return true;
+ }
+ if(route==='/api/arcade/attack'&&req.method==='POST'){
+  const b=await readJson(req);
+  const attacker=mascots.find(m=>m.id===b.attackerId);
+  const target=mascots.find(m=>m.id===b.targetId);
+  if(!attacker||!target){send(400,{error:'请选择有效的攻击方与目标吉祥物'});return true}
+  if(attacker.id===target.id){send(400,{error:'不能攻击自己哦！请选择其他吉祥物作为目标'});return true}
+  const currentState=await state();
+  const petState=currentState.pets.find(p=>p.id===attacker.id);
+  if(!petState||!petState.isMaxLevel){
+   send(400,{error:`【${attacker.baseName}】尚未达到巅峰满级（Lv.${attacker.forms.length}），无法解锁攻击技能！快去投喂升级吧~`});
+   return true;
+  }
+  let passwords={};
+  try{passwords=JSON.parse(await db.setting('mascot_attack_passwords','{}')||'{}')}catch{}
+  const expectedPassword=(passwords[attacker.id]||'2501').trim();
+  const providedPassword=String(b.password||'').trim();
+  if(providedPassword!==expectedPassword){
+   send(403,{error:`【${attacker.baseName}】专属攻击密码错误！请向管理员索取正确密码，防止他人滥用你的吉祥物攻击别人！`});
+   return true;
+  }
+  let hps={};
+  try{hps=JSON.parse(await db.setting('mascot_hps','{}')||'{}')}catch{}
+  const currentHp=typeof hps[target.id]==='number'?hps[target.id]:100;
+  const damage=attacker.attackSkill?.damage||30;
+  const newHp=Math.max(0,currentHp-damage);
+  hps[target.id]=newHp;
+  await db.saveSetting('mascot_hps',JSON.stringify(hps));
+  const fullHps={};
+  for(const m of mascots)fullHps[m.id]=typeof hps[m.id]==='number'?hps[m.id]:100;
+  send(200,{
+   ok:true,
+   attackerId:attacker.id,
+   targetId:target.id,
+   damage,
+   targetHp:newHp,
+   skill:attacker.attackSkill?.name||'终极攻击',
+   skillName:attacker.attackSkill?.name||'终极攻击',
+   attacker:petState.name||attacker.baseName,
+   attackerName:petState.name||attacker.baseName,
+   target:currentState.pets.find(p=>p.id===target.id)?.name||target.baseName,
+   targetName:currentState.pets.find(p=>p.id===target.id)?.name||target.baseName,
+   hps:fullHps,
+   log:`⚔️【${petState.name}】输入密码验证成功，释放神技【${attacker.attackSkill?.name}】，对${target.baseName}造成了 ${damage} 点巨额伤害！`
+  });
+  return true;
+ }
  if(route==='/api/arcade/reaction'&&req.method==='POST'){
   const b=await readJson(req);if(!idOk(b.attemptId)||!Array.isArray(b.rounds)||b.rounds.length!==3||b.rounds.some(n=>!Number.isInteger(n)||n<50||n>2000)){send(400,{error:'请完成三轮反应挑战，每轮有效成绩为 50–2000 毫秒'});return true}
   await db.arcadeCleanup(dayAt(timestamp-7*86400000),timestamp);

@@ -25,11 +25,14 @@ for(const backend of ['sqlite','postgres'])test(backend+': arcade feeding, score
   server=await createApp(dir,store);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
   const client=()=>{const cookies=new Map();return async(route,method='GET',body,headers={})=>{const r=await fetch(base+'/api'+route,{method,headers:{'Content-Type':'application/json',Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});for(const raw of r.headers.getSetCookie()){const pair=raw.split(';')[0],at=pair.indexOf('=');cookies.set(pair.slice(0,at),pair.slice(at+1))}return {status:r.status,data:await r.json()}}};
   const artist=client(),other=client(),solver=client(),admin=client();
-  let state=(await artist('/arcade')).data;assert.equal(state.pets.length,14);assert.equal(state.my.name,'路过的同学');assert.equal(state.my.mascot,'panda');assert.equal(state.my.bestReaction,null);const wuba0=state.pets.find(p=>p.id==='wuba');assert.equal(wuba0.name,'小萝卜');assert.equal(wuba0.formIndex,0);
+  let state=(await artist('/arcade')).data;assert.equal(state.pets.length,17);assert.equal(state.my.name,'路过的同学');assert.equal(state.my.mascot,'panda');assert.equal(state.my.bestReaction,null);const wuba0=state.pets.find(p=>p.id==='wuba');assert.equal(wuba0.name,'小萝卜');assert.equal(wuba0.formIndex,0);
+  const shoe0=state.pets.find(p=>p.id==='shoe');assert.equal(shoe0.name,'破布草鞋');assert.equal(shoe0.level,1);
+  const oil0=state.pets.find(p=>p.id==='oil');assert.equal(oil0.name,'晶莹小油滴');
+  const liubang0=state.pets.find(p=>p.id==='liubang');assert.equal(liubang0.name,'泗水亭长刘季');
   assert.equal((await artist('/arcade/profile','PUT',{name:'画家甲',mascot:'panda'})).status,200);assert.equal((await other('/arcade/profile','PUT',{name:'同学乙',mascot:'cat'})).status,200);
   assert.equal((await artist('/arcade/profile','PUT',{name:' ',mascot:'panda'})).status,400);assert.equal((await artist('/arcade/feed','PUT',{mascot:'dragon'})).status,400);
   const feeds=await Promise.all([artist('/arcade/feed','PUT',{mascot:'panda'}),artist('/arcade/feed','PUT',{mascot:'panda'})]);assert.ok(feeds.every(r=>r.status===200));state=(await artist('/arcade')).data;assert.equal(state.pets.find(p=>p.id==='panda').feeds,1);assert.equal(state.my.stickerCount,1);assert.equal((await other('/arcade')).data.pets.find(p=>p.id==='panda').fed,false);
-  await other('/arcade/feed','PUT',{mascot:'panda'});assert.equal((await artist('/arcade')).data.pets.find(p=>p.id==='panda').feeds,2);for(const pet of state.pets.filter(p=>p.id!=='panda'))await artist('/arcade/feed','PUT',{mascot:pet.id});assert.equal((await artist('/arcade')).data.my.stickerCount,14);
+  await other('/arcade/feed','PUT',{mascot:'panda'});assert.equal((await artist('/arcade')).data.pets.find(p=>p.id==='panda').feeds,2);for(const pet of state.pets.filter(p=>p.id!=='panda'))await artist('/arcade/feed','PUT',{mascot:pet.id});assert.equal((await artist('/arcade')).data.my.stickerCount,17);
   for(let i=0;i<8;i++)await store.arcadeFeed('2000-01-01','old-'+i,'panda');state=(await artist('/arcade')).data;assert.equal(state.pets.find(p=>p.id==='panda').level,2);assert.equal(state.pets.find(p=>p.id==='panda').progress,0);for(let i=0;i<9;i++)await store.arcadeFeed('2000-01-02','wuba-'+i,'wuba');state=(await artist('/arcade')).data;const wuba1=state.pets.find(p=>p.id==='wuba');assert.equal(wuba1.feeds,10);assert.equal(wuba1.name,'萝卜头');assert.equal(wuba1.formIndex,1);
   const attempt={attemptId:id(),rounds:[400,200,300]};assert.equal((await artist('/arcade/reaction','POST',attempt)).status,200);assert.equal((await artist('/arcade/reaction','POST',attempt)).data.my.bestReaction,300);assert.equal((await other('/arcade/reaction','POST',attempt)).status,409);
   assert.equal((await artist('/arcade/reaction','POST',{...attempt,rounds:[100,100,100]})).status,409);assert.equal((await artist('/arcade/reaction','POST',{attemptId:id(),rounds:[700,900,800]})).data.my.bestReaction,300);assert.equal((await artist('/arcade/reaction','POST',{attemptId:id(),rounds:[49,300,400]})).status,400);assert.equal((await artist('/arcade/reaction','POST',{attemptId:id(),rounds:[100,200]})).status,400);
@@ -53,6 +56,19 @@ for(const backend of ['sqlite','postgres'])test(backend+': arcade feeding, score
   assert.equal((await artist('/arcade/intimacy','POST',{code:'wrong'})).status,403);
   const initIntimate=await artist('/arcade/intimacy','POST',{code:'XYG'});
   assert.equal(initIntimate.status,200);assert.equal(initIntimate.data.intimate,true);assert.equal(initIntimate.data.duration,60);
+  const pRes=await admin('/admin/mascot-passwords');assert.equal(pRes.status,200);
+  assert.equal((await other('/admin/mascot-passwords')).status,401);
+  assert.equal((await admin('/admin/mascot-passwords','PUT',{passwords:{shoe:'secret-shoe',chicken:'chicken-pwd'}})).status,200);
+  const hpRes=await artist('/arcade/mascot-hps');assert.equal(hpRes.status,200);assert.equal(hpRes.data.hps.shoe,100);
+  assert.equal((await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'liubang',password:'secret-shoe'})).status,400);
+  for(let i=0;i<50;i++)await store.arcadeFeed('2000-01-03','shoe-feeder-'+i,'shoe');
+  state=(await artist('/arcade')).data;const shoeMax=state.pets.find(p=>p.id==='shoe');
+  assert.equal(shoeMax.level,6);assert.equal(shoeMax.isMaxLevel,true);assert.equal(shoeMax.name,'灭世飞履·至尊切尔西');
+  assert.equal((await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'liubang',password:'wrong-pwd'})).status,403);
+  assert.equal((await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'shoe',password:'secret-shoe'})).status,400);
+  const attackSuccess=await artist('/arcade/attack','POST',{attackerId:'shoe',targetId:'liubang',password:'secret-shoe'});
+  assert.equal(attackSuccess.status,200);assert.equal(attackSuccess.data.damage,35);assert.equal(attackSuccess.data.targetHp,65);
+  assert.equal((await artist('/arcade/mascot-hps')).data.hps.liubang,65);
   assert.equal((await store.notes('test'))[0].text,'原留言');assert.equal(await store.setting('announcement'),'原公告');if(engine)await postgresStore(pool);assert.equal((await other('/arcade')).data.drawings.length,0);
   for(const route of ['/arcade.js','/arcade-database.js','/scripts/migrate-arcade.js'])assert.equal((await fetch(base+route)).status,404);await admin('/admin/logout','POST');assert.equal((await admin('/admin/arcade')).status,401);
  }finally{if(old===undefined)delete process.env.ADMIN_PASSWORD_HASH;else process.env.ADMIN_PASSWORD_HASH=old;if(server?.listening)await new Promise(r=>{server.close(r);server.closeAllConnections()});secondaryClose?.();await engine?.close();await rm(dir,{recursive:true,force:true})}

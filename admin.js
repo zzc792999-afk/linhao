@@ -175,6 +175,27 @@ export function adminRoutes(db,readJson){
    await audit('重置主页风采人物',id);
    send(200,{ok:true,people:await db.people()});return true;
   }
+  if(url.pathname==='/api/admin/mascot-passwords'&&req.method==='GET'){
+   const raw=await db.setting('mascot_attack_passwords','{}');
+   let passwords={};
+   try{passwords=JSON.parse(raw||'{}');}catch(e){}
+   send(200,{passwords});return true;
+  }
+  if(url.pathname==='/api/admin/mascot-passwords'&&req.method==='PUT'){
+   const body=await readJson(req);
+   if(!body||typeof body.passwords!=='object'||Array.isArray(body.passwords)){
+    send(400,{error:'参数格式错误'});return true;
+   }
+   const clean={};
+   for(const [k,v] of Object.entries(body.passwords)){
+    if(typeof k==='string'&&k.length<=32&&typeof v==='string'&&v.length<=32){
+     clean[k]=v.trim();
+    }
+   }
+   await db.saveSetting('mascot_attack_passwords',JSON.stringify(clean));
+   await audit('更新吉祥物攻击密码');
+   send(200,{ok:true,passwords:clean});return true;
+  }
   send(404,{error:'管理接口不存在'});return true;
  };
 }

@@ -8,9 +8,7 @@
     return node;
   };
 
-  // --------------------------------------------------------------------------
-  // 1. Web Audio 合成音效（纯原生，零外部音频资源依赖，即开即响）
-  // --------------------------------------------------------------------------
+  // 1. Audio synthesis
   let audioCtx = null;
   function getAudioContext() {
     if (!audioCtx) {
@@ -23,7 +21,6 @@
     return audioCtx;
   }
 
-  // 木鱼原声合成（清脆厚重“笃”声）
   function playMuyuSound() {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -42,7 +39,6 @@
     } catch {}
   }
 
-  // 篮球弹跳音效（空心入网与反弹“砰”）
   function playBasketballSound() {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -61,7 +57,6 @@
     } catch {}
   }
 
-  // 铁山靠与只因天雷暴击音效（轰鸣撞击）
   function playThunderSound() {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -80,10 +75,9 @@
     } catch {}
   }
 
-  // --------------------------------------------------------------------------
-  // 2. 吉祥物血量 HP 系统 (本地与互动实时计算)
-  // --------------------------------------------------------------------------
+  // 2. HP Management & Server Sync
   const HP_KEY = 'class2501_mascots_hp';
+
   function getHpMap() {
     try {
       return JSON.parse(localStorage.getItem(HP_KEY)) || {};
@@ -107,6 +101,21 @@
     return map[id];
   }
 
+  async function syncHpsFromServer() {
+    try {
+      const res = await fetch('/api/arcade/mascot-hps', { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hps) {
+          const map = getHpMap();
+          Object.assign(map, data.hps);
+          localStorage.setItem(HP_KEY, JSON.stringify(map));
+          Object.keys(map).forEach(id => updateHpUi(id));
+        }
+      }
+    } catch {}
+  }
+
   function showDmgPop(targetEl, text, isHeal = false) {
     if (!targetEl) return;
     const rect = targetEl.getBoundingClientRect();
@@ -114,7 +123,7 @@
     pop.style.left = (rect.left + rect.width / 2 - 40 + (Math.random() * 20 - 10)) + 'px';
     pop.style.top = (rect.top + 20) + 'px';
     document.body.append(pop);
-    setTimeout(() => pop.remove(), 1200);
+    setTimeout(() => pop.remove(), 1400);
   }
 
   function updateHpUi(id) {
@@ -130,20 +139,148 @@
     if (count) count.textContent = hp + ' HP';
   }
 
-  // --------------------------------------------------------------------------
-  // 3. 鸡专属攻击系统与技能触发
-  // --------------------------------------------------------------------------
-  let pendingSkill = null; // 'basketball' | 'iron_shoulder' | 'thunder'
+  // 3. Attack Modal
+  let activeModal = null;
+  function openAttackModal(attackerPet, allPets) {
+    if (activeModal) activeModal.remove();
 
+    const overlay = el('div', undefined, 'attack-modal-overlay');
+    const box = el('div', undefined, 'attack-modal-box');
+
+    const h3 = el('h3', `⚔️ 释放【${attackerPet.skillName || '专属攻击'}】`);
+    const hint = el('p', `攻击方：${attackerPet.name}（Lv.${attackerPet.level} 巅峰形态） · 伤害值：${attackerPet.skillDamage || 20} HP`, 'small-note');
+    const secureHint = el('p', '🛡️ 为防止他人滥用或冒用攻击，请输入管理员设置的授权密码。', 'small-note');
+    secureHint.style.color = '#e67e22';
+
+    // Target Selection
+    const targetLabel = el('label', '选择攻击目标：');
+    const targetSelect = el('select');
+    allPets.filter(p => p.id !== attackerPet.id).forEach(p => {
+      const opt = el('option', `${p.name} (当前精力：${getMascotHp(p.id)} HP)`);
+      opt.value = p.id;
+      targetSelect.append(opt);
+    });
+    targetLabel.append(targetSelect);
+
+    // Password input
+    const pwdLabel = el('label', '输入攻击授权密码：');
+    const pwdInput = el('input');
+    pwdInput.type = 'password';
+    pwdInput.placeholder = '请输入该吉祥物的专属密码（默认 2501）';
+    pwdInput.maxLength = 32;
+    pwdLabel.append(pwdInput);
+
+    // Error text
+    const errText = el('p', '', 'error-text');
+
+    // Actions
+    const actions = el('div', undefined, 'attack-modal-actions');
+    const cancelBtn = el('button', '取消', 'button secondary');
+    cancelBtn.type = 'button';
+    cancelBtn.addEventListener('click', () => {
+      overlay.remove();
+      activeModal = null;
+    });
+
+    const submitBtn = el('button', '确认发动攻击 ⚡', 'button');
+    submitBtn.type = 'button';
+    submitBtn.addEventListener('click', async () => {
+      const pwd = pwdInput.value.trim();
+      if (!pwd) {
+        errText.textContent = '请输入攻击授权密码！';
+        pwdInput.focus();
+        return;
+      }
+      submitBtn.disabled = true;
+      cancelBtn.disabled = true;
+      errText.textContent = '正在核对密码并执行攻击…';
+
+      try {
+        const res = await fetch('/api/arcade/attack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            attackerId: attackerPet.id,
+            targetId: targetSelect.value,
+            password: pwd
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || '攻击失败');
+        }
+
+        // Success!
+        playThunderSound();
+        overlay.remove();
+        activeModal = null;
+
+        // Apply new HPs
+        if (data.hps) {
+          const map = getHpMap();
+          Object.assign(map, data.hps);
+          localStorage.setItem(HP_KEY, JSON.stringify(map));
+          Object.keys(map).forEach(id => updateHpUi(id));
+        } else {
+          setMascotHp(data.targetId, data.targetHp);
+        }
+
+        // Animate target
+        const targetCard = document.querySelector(`.arcade-pet-card[data-arcade-pet="${data.targetId}"]`);
+        if (targetCard) {
+          showDmgPop(targetCard, `-${data.damage} HP 💥 【${data.skill}】`);
+          targetCard.classList.add('pet-stunned');
+          setTimeout(() => targetCard.classList.remove('pet-stunned'), 2400);
+        }
+
+        // Animate attacker
+        const attackerCard = document.querySelector(`.arcade-pet-card[data-arcade-pet="${data.attackerId}"]`);
+        if (attackerCard) {
+          attackerCard.classList.add('pet-feed-pop');
+          setTimeout(() => attackerCard.classList.remove('pet-feed-pop'), 900);
+        }
+
+        const statusEl = $('#arcade-status');
+        if (statusEl) {
+          statusEl.textContent = `⚔️【${data.attacker}】施展【${data.skill}】！击中【${data.target}】，扣除 ${data.damage} 点精力！目标剩余 ${data.targetHp} HP。`;
+        }
+      } catch (err) {
+        errText.textContent = `❌ ${err.message}`;
+        submitBtn.disabled = false;
+        cancelBtn.disabled = false;
+      }
+    });
+
+    actions.append(cancelBtn, submitBtn);
+    box.append(h3, hint, secureHint, targetLabel, pwdLabel, errText, actions);
+    overlay.append(box);
+    document.body.append(overlay);
+    activeModal = overlay;
+    pwdInput.focus();
+  }
+
+  // 4. Attach HP bars and attack buttons
   function attachMascotsHpAndBattle() {
     const cards = document.querySelectorAll('.arcade-pet-card[data-arcade-pet]');
     if (!cards.length) return;
 
-    cards.forEach(card => {
+    // Gather pet metadata
+    const petsMeta = Array.from(cards).map(card => {
       const id = card.dataset.arcadePet;
-      if (!id) return;
+      const isMaxLevel = card.dataset.isMaxLevel === 'true' || (parseInt(card.dataset.petLevel || '1', 10) >= 6);
+      const level = parseInt(card.dataset.petLevel || '1', 10);
+      const name = card.querySelector('h4')?.textContent?.split(' ')[0] || id;
+      const skillName = card.dataset.skillName || '专属攻击';
+      const skillDesc = card.dataset.skillDesc || '';
+      const skillDamage = parseInt(card.dataset.skillDamage || '20', 10);
+      return { id, isMaxLevel, level, name, skillName, skillDesc, skillDamage, card };
+    });
 
-      // 1. 注入血条（若未注入）
+    petsMeta.forEach(pet => {
+      const { card, id, isMaxLevel, skillName, skillDamage } = pet;
+
+      // 1. HP Bar
       if (!card.querySelector('.pet-hp-bar-wrap')) {
         const hp = getMascotHp(id);
         const hpWrap = el('div', undefined, 'pet-hp-bar-wrap');
@@ -155,7 +292,6 @@
         const count = el('span', hp + ' HP', 'pet-hp-count');
         hpWrap.append(label, bar, count);
 
-        // 插入在吉祥物名与性格描述之间
         const heading = card.querySelector('h4');
         if (heading && heading.nextSibling) {
           card.insertBefore(hpWrap, heading.nextSibling);
@@ -164,7 +300,7 @@
         }
       }
 
-      // 2. 监听投喂按钮：投喂时回血 +25 HP
+      // 2. Feed listener -> +25 HP
       const feedBtn = card.querySelector('.pet-feed');
       if (feedBtn && !feedBtn._hpBound) {
         feedBtn._hpBound = true;
@@ -176,188 +312,43 @@
         });
       }
 
-      // 3. 点击被选中的目标卡片（当鸡准备攻击时）
-      if (!card._attackTargetBound) {
-        card._attackTargetBound = true;
-        card.addEventListener('click', e => {
-          if (!pendingSkill) return;
-          if (id === 'chicken') {
-            alert('不能攻击自己哦！请点击其他吉祥物作为攻击目标 🎯');
-            return;
-          }
-          executeSkillAttack(id, pendingSkill);
-          pendingSkill = null;
-          updateSkillButtonsState();
-        });
+      // 3. Attack Area for EVERY mascot
+      let skillArea = card.querySelector('.pet-skill-area');
+      if (!skillArea) {
+        skillArea = el('div', undefined, 'pet-skill-area');
+        card.append(skillArea);
       }
 
-      // 4. 为“鸡”专属注入战斗技能栏
-      if (id === 'chicken' && !card.querySelector('.chicken-attack-btns')) {
-        const levelText = card.querySelector('.pet-level')?.textContent || 'Lv.1';
-        const match = levelText.match(/Lv\.(\d+)/);
-        const level = match ? parseInt(match[1], 10) : 1;
+      skillArea.replaceChildren();
 
-        if (level >= 3) {
-          card.classList.add('chicken-ultimate');
-        }
-
-        const btnWrap = el('div', undefined, 'chicken-attack-btns');
-
-        // 技能 1: 单手投篮
-        const btn1 = el('button', '🏀 单手投篮 (-15 HP)', 'chicken-skill-btn basic');
-        btn1.type = 'button';
-        btn1.title = '普攻：点击后点击任一吉祥物投掷篮球';
-        btn1.addEventListener('click', e => {
+      if (isMaxLevel) {
+        card.classList.add('pet-max-unlocked');
+        const attackBtn = el('button', `⚔️ 释放【${skillName}】`, 'mascot-attack-btn');
+        attackBtn.type = 'button';
+        attackBtn.title = `对其他吉祥物造成 ${skillDamage} 点体力伤害（需输入管理密码）`;
+        attackBtn.addEventListener('click', e => {
           e.stopPropagation();
-          setOrTriggerSkill('basketball', btn1);
+          openAttackModal(pet, petsMeta);
         });
-
-        // 技能 2: 铁山靠 (Lv.2 解锁)
-        const btn2 = el('button', level >= 2 ? '💥 铁山靠 (-30 HP)' : '🔒 铁山靠 (需鸡 Lv.2 解锁)', 'chicken-skill-btn charge');
-        btn2.type = 'button';
-        btn2.disabled = level < 2;
-        btn2.title = level >= 2 ? '进阶暴击：强力冲撞并使目标眩晕旋转' : '每投喂 10 次升级变身后解锁';
-        btn2.addEventListener('click', e => {
-          e.stopPropagation();
-          setOrTriggerSkill('iron_shoulder', btn2);
-        });
-
-        // 技能 3: 只因天雷全场 AOE (Lv.3 解锁)
-        const btn3 = el('button', level >= 3 ? '⚡ 只因天雷 (全场AOE)' : '🔒 只因天雷 (需鸡 Lv.3 解锁)', 'chicken-skill-btn aoe');
-        btn3.type = 'button';
-        btn3.disabled = level < 3;
-        btn3.title = level >= 3 ? '终极奥义：全场所有吉祥物同时遭受天雷与音乐暴击' : '进化至唱跳霸王鸡解锁';
-        btn3.addEventListener('click', e => {
-          e.stopPropagation();
-          executeAoeThunder();
-        });
-
-        const hint = el('div', '💡 提示：点击技能后，点击任一吉祥物即可造成伤害！', 'skill-cooldown');
-
-        btnWrap.append(btn1, btn2, btn3, hint);
-        card.append(btnWrap);
+        skillArea.append(attackBtn);
+      } else {
+        card.classList.remove('pet-max-unlocked');
+        const lockedBadge = el('div', `🔒 Lv.6 满级解锁【${skillName}】`, 'mascot-locked-skill');
+        skillArea.append(lockedBadge);
       }
     });
   }
 
-  function setOrTriggerSkill(skillType, btn) {
-    if (pendingSkill === skillType) {
-      pendingSkill = null;
-      updateSkillButtonsState();
-      return;
-    }
-    pendingSkill = skillType;
-    updateSkillButtonsState();
-
-    const statusEl = $('#arcade-status');
-    if (statusEl) {
-      statusEl.textContent = '🎯 已装填技能！请点击上方任意一只其他吉祥物发动攻击（或 4 秒后自动随机攻击目标）~';
-    }
-
-    clearTimeout(window._autoAttackTimer);
-    window._autoAttackTimer = setTimeout(() => {
-      if (pendingSkill === skillType) {
-        // 自动选择一只非鸡的吉祥物
-        const targets = Array.from(document.querySelectorAll('.arcade-pet-card[data-arcade-pet]'))
-          .map(c => c.dataset.arcadePet)
-          .filter(id => id && id !== 'chicken');
-        if (targets.length) {
-          const rand = targets[Math.floor(Math.random() * targets.length)];
-          executeSkillAttack(rand, skillType);
-        }
-        pendingSkill = null;
-        updateSkillButtonsState();
-      }
-    }, 4000);
-  }
-
-  function updateSkillButtonsState() {
-    document.querySelectorAll('.chicken-skill-btn').forEach(b => {
-      b.style.outline = '';
-    });
-    if (pendingSkill) {
-      const activeBtn = document.querySelector(`.chicken-skill-btn.${pendingSkill === 'basketball' ? 'basic' : 'charge'}`);
-      if (activeBtn) activeBtn.style.outline = '3px solid #ff4757';
-    }
-  }
-
-  function executeSkillAttack(targetId, skill) {
-    const targetCard = document.querySelector(`.arcade-pet-card[data-arcade-pet="${targetId}"]`);
-    if (!targetCard) return;
-
-    if (skill === 'basketball') {
-      playBasketballSound();
-      const current = getMascotHp(targetId);
-      const newHp = setMascotHp(targetId, current - 15);
-      showDmgPop(targetCard, '-15 HP 🏀 投篮命中！');
-
-      targetCard.classList.add('pet-feed-pop');
-      setTimeout(() => targetCard.classList.remove('pet-feed-pop'), 600);
-
-      const statusEl = $('#arcade-status');
-      if (statusEl) {
-        statusEl.textContent = `🏀 鸡对 ${targetCard.querySelector('h4')?.textContent || targetId} 投出了一记三分球，造成 15 点伤害！剩余 ${newHp} HP`;
-      }
-    } else if (skill === 'iron_shoulder') {
-      playThunderSound();
-      const current = getMascotHp(targetId);
-      const newHp = setMascotHp(targetId, current - 30);
-      showDmgPop(targetCard, '-30 HP 💥 铁山靠暴击！');
-
-      targetCard.classList.add('pet-stunned');
-      setTimeout(() => targetCard.classList.remove('pet-stunned'), 2400);
-
-      // 弹出受击吐槽气泡
-      const quotes = [
-        '你干嘛~~哈哈哎哟！😵',
-        '露出小黑脚了是吧！💫',
-        '巅峰产生虚伪的拥护！💥',
-        '哎哟你这大招有点痛！🤕'
-      ];
-      showDmgPop(targetCard, quotes[Math.floor(Math.random() * quotes.length)]);
-
-      const statusEl = $('#arcade-status');
-      if (statusEl) {
-        statusEl.textContent = `💥 铁山靠冲撞！${targetCard.querySelector('h4')?.textContent || targetId} 原地眩晕旋转，扣除 30 点体力！剩余 ${newHp} HP`;
-      }
-    }
-  }
-
-  function executeAoeThunder() {
-    playThunderSound();
-    const statusEl = $('#arcade-status');
-    if (statusEl) {
-      statusEl.textContent = '⚡【只因天雷 · 鸡你太美】全场终极奥义爆发！所有吉祥物集体受击掉血！';
-    }
-
-    const cards = document.querySelectorAll('.arcade-pet-card[data-arcade-pet]');
-    cards.forEach(card => {
-      const id = card.dataset.arcadePet;
-      if (id && id !== 'chicken') {
-        const cur = getMascotHp(id);
-        setMascotHp(id, cur - 12);
-        showDmgPop(card, '-12 HP ⚡');
-        card.classList.add('pet-feed-pop');
-        setTimeout(() => card.classList.remove('pet-feed-pop'), 700);
-      }
-    });
-  }
-
-  // --------------------------------------------------------------------------
-  // 4. 高中生爆梗模块：【班级电子木鱼】 & 【考场玄学蒙题神器】
-  // --------------------------------------------------------------------------
+  // 5. High school fun section (Wooden fish & test oracle)
   const MERIT_KEY = 'class2501_wooden_fish_merit';
-
   function getLocalMerit() {
     return parseInt(localStorage.getItem(MERIT_KEY) || '0', 10);
   }
-
   function addLocalMerit() {
     const val = getLocalMerit() + 1;
     localStorage.setItem(MERIT_KEY, String(val));
     return val;
   }
-
   const meritBlessings = [
     '功德 +1 🪘',
     '高考 +10 分 💯',
@@ -372,7 +363,6 @@
     '英语听力全听懂 +1 🎧',
     '期末排名上升 +1 🚀'
   ];
-
   const oracleAnswers = [
     '【考场第一定律】：三长一短选最短！这道题选 A，相信直觉稳了！',
     '【考场第二定律】：三短一长选最长！根据几何对称性选 C！',
@@ -392,12 +382,10 @@
     const section = el('div', undefined, 'muyu-section');
     section.id = 'highschool-fun-section';
 
-    // 标题
     const eyebrow = el('div', 'CAMPUS STRESS RELIEVER · 课间解压神器', 'eyebrow');
     const title = el('h3', '班级电子木鱼 · 考神附体功德机 🪘');
     const desc = el('p', '敲一次木鱼，功德+1，做题全对！支持鼠标轻点或键盘空格键敲击。', 'small-note');
 
-    // 木鱼主体
     const bowl = el('div', '🪘', 'muyu-bowl');
     bowl.setAttribute('role', 'button');
     bowl.setAttribute('tabindex', '0');
@@ -407,7 +395,6 @@
     meritNum.id = 'muyu-merit-count';
     const meritLabel = el('div', '今日我的累计功德点数', 'muyu-merit-label');
 
-    // 敲击动作处理
     function handleHit(e) {
       if (e) e.preventDefault();
       playMuyuSound();
@@ -415,10 +402,9 @@
       meritNum.textContent = String(current);
 
       bowl.classList.remove('hit');
-      void bowl.offsetWidth; // trigger reflow
+      void bowl.offsetWidth;
       bowl.classList.add('hit');
 
-      // 飘字动画
       const rect = bowl.getBoundingClientRect();
       const floater = el('div', meritBlessings[Math.floor(Math.random() * meritBlessings.length)], 'muyu-float');
       floater.style.left = (rect.left + rect.width / 2 - 50 + (Math.random() * 30 - 15)) + 'px';
@@ -432,7 +418,6 @@
       if (e.code === 'Space' || e.code === 'Enter') handleHit(e);
     });
 
-    // 玄学蒙题神器部分
     const oracleBox = el('div');
     oracleBox.style.marginTop = '24px';
     oracleBox.style.borderTop = '1px dashed var(--line)';
@@ -454,10 +439,8 @@
     });
 
     oracleBox.append(oracleBtn, oracleResult);
-
     section.append(eyebrow, title, desc, bowl, meritNum, meritLabel, oracleBox);
 
-    // 插入在吉祥物展示区与贴纸相册之间
     const stickerAlbum = petsPanel.querySelector('.sticker-album');
     if (stickerAlbum) {
       petsPanel.insertBefore(section, stickerAlbum);
@@ -466,14 +449,16 @@
     }
   }
 
-  // --------------------------------------------------------------------------
-  // 5. 初始化与周期检测
-  // --------------------------------------------------------------------------
+  // 6. Init
   function init() {
+    syncHpsFromServer();
     attachMascotsHpAndBattle();
     renderHighSchoolFunSection();
 
-    // 监听 DOM 变化（当同学切换标签或刷新游乐厅时动态重新挂载）
+    window.addEventListener('class-mascots-rendered', () => {
+      attachMascotsHpAndBattle();
+    });
+
     const mascotsContainer = $('#arcade-mascots');
     if (mascotsContainer) {
       const observer = new MutationObserver(() => {
@@ -482,7 +467,6 @@
       observer.observe(mascotsContainer, { childList: true });
     }
 
-    // 快捷键支持：当在游乐厅面板时按空格键也能敲木鱼
     window.addEventListener('keydown', e => {
       if (e.code === 'Space' && e.target === document.body) {
         const bowl = $('.muyu-bowl');

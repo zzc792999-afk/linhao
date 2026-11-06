@@ -41,8 +41,8 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
   if(attacker.id===target.id){send(400,{error:'不能攻击自己哦！请选择其他吉祥物作为目标'});return true}
   const currentState=await state();
   const petState=currentState.pets.find(p=>p.id===attacker.id);
-  if(!petState||!petState.isMaxLevel){
-   send(400,{error:`【${attacker.baseName}】尚未达到巅峰满级（Lv.${attacker.forms.length}），无法解锁攻击技能！快去投喂升级吧~`});
+  if(!petState||petState.level<4){
+   send(400,{error:`【${attacker.baseName}】尚未达到 4 级（当前 Lv.${petState?petState.level:1}），达到 4 级后方可解锁攻击技能！快去投喂升级吧~`});
    return true;
   }
   let stats={};
@@ -86,7 +86,9 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
   let hps={};
   try{hps=JSON.parse(await db.setting('mascot_hps','{}')||'{}')}catch{}
   const currentHp=typeof hps[target.id]==='number'?hps[target.id]:100;
-  const damage=attacker.attackSkill?.damage||30;
+  const baseDamage=attacker.attackSkill?.baseDamage||attacker.attackSkill?.damage||25;
+  const levelBonus=Math.max(0,petState.level-4)*10;
+  const damage=baseDamage+levelBonus;
   const newHp=Math.max(0,currentHp-damage);
   hps[target.id]=newHp;
   await db.saveSetting('mascot_hps',JSON.stringify(hps));
@@ -94,11 +96,44 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
   for(const m of mascots)fullHps[m.id]=typeof hps[m.id]==='number'?hps[m.id]:100;
   const targetPetAfterState=await state();
   const targetPetAfter=targetPetAfterState.pets.find(p=>p.id===target.id);
+
+  // Save battle log for all users to see
+  let battleLogs=[];
+  try{battleLogs=JSON.parse(await db.setting('mascot_battle_logs','[]')||'[]')}catch{}
+  if(!Array.isArray(battleLogs))battleLogs=[];
+  const timeStr=new Date().toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const logMsg=levelDropped
+   ?`💥【${petState.name}(Lv.${petState.level})】释放【${attacker.attackSkill?.name}】，造成 ${damage} 点巨额伤害！【${target.baseName}】累计遭受 3 次重击，等级下降为 Lv.${targetPetAfter?.level} · ${targetPetAfter?.name}！需要全班重新投喂为它升阶！`
+   :`⚔️【${petState.name}(Lv.${petState.level})】释放【${attacker.attackSkill?.name}】，对【${target.baseName}】造成了 ${damage} 点体力伤害（基础 ${baseDamage} + Lv.${petState.level}加成 ${levelBonus} 点）！目标剩余 ${newHp} HP（当前受击 ${stats.hitsReceived[target.id]||0}/3 次）。`;
+  const newBattleEntry={
+   id:randomBytes(8).toString('hex'),
+   time:timeStr,
+   timestamp:Date.now(),
+   attackerId:attacker.id,
+   attackerName:petState.name,
+   attackerLevel:petState.level,
+   targetId:target.id,
+   targetName:targetPetBefore?targetPetBefore.name:target.baseName,
+   targetLevel:targetPetAfter?targetPetAfter.level:targetPetBefore?.level,
+   skillName:attacker.attackSkill?.name||'终极攻击',
+   damage,
+   baseDamage,
+   levelBonus,
+   targetHp:newHp,
+   levelDropped,
+   log:logMsg
+  };
+  battleLogs.unshift(newBattleEntry);
+  if(battleLogs.length>20)battleLogs=battleLogs.slice(0,20);
+  await db.saveSetting('mascot_battle_logs',JSON.stringify(battleLogs));
+
   send(200,{
    ok:true,
    attackerId:attacker.id,
    targetId:target.id,
    damage,
+   baseDamage,
+   levelBonus,
    targetHp:newHp,
    skill:attacker.attackSkill?.name||'终极攻击',
    skillName:attacker.attackSkill?.name||'终极攻击',
@@ -113,12 +148,14 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
    levelDropped,
    targetLevel:targetPetAfter?.level,
    targetFormName:targetPetAfter?.name,
-   log:levelDropped
-    ?`💥【${petState.name}】释放【${attacker.attackSkill?.name}】！【${target.baseName}】累计遭受 3 次重击，等级下降 1 级（变为 Lv.${targetPetAfter?.level} · ${targetPetAfter?.name}）！需要同学们重新投票投喂来为它升级！`
-    :`⚔️【${petState.name}】释放【${attacker.attackSkill?.name}】，对【${target.baseName}】造成了 ${damage} 点巨额伤害！（目标当前承受攻击 ${stats.hitsReceived[target.id]}/3 次，被击中 3 次将降级）`
+   battleLogs,
+   log:logMsg
   });
   return true;
  }
+ if(route==='/api/arcade/battle-logs'&&req.method==='GET'){
+  let logs=[];try{logs=JSON.parse(await db.setting('mascot_battle_logs','[]')||'[]')}catch{}
+  send(200,{battleLogs:logs});return true;}
  if(route==='/api/arcade/reaction'&&req.method==='POST'){
   const b=await readJson(req);if(!idOk(b.attemptId)||!Array.isArray(b.rounds)||b.rounds.length!==3||b.rounds.some(n=>!Number.isInteger(n)||n<50||n>2000)){send(400,{error:'请完成三轮反应挑战，每轮有效成绩为 50–2000 毫秒'});return true}
   await db.arcadeCleanup(dayAt(timestamp-7*86400000),timestamp);

@@ -6,23 +6,27 @@
  const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n};
 
  const MASCOTS = [
-  { id: 'pig', name: '飞天小猪', icon: '🐷', skill: '【小猪突击】扣除目标 20 点体力' },
-  { id: 'turtle', name: '稳赢神龟', icon: '🐢', skill: '【玄武重壳】扣除目标 18 点体力' },
-  { id: 'chicken', name: '战斗小鸡', icon: '🐔', skill: '【尖嘴啄击】扣除目标 22 点体力' },
-  { id: 'cat', name: '摸鱼猫猫', icon: '🐱', skill: '【猫猫乱抓】扣除目标 20 点体力' },
-  { id: 'owl', name: '熬夜猫头鹰', icon: '🦉', skill: '【夜视死光】扣除目标 24 点体力' },
-  { id: 'dog', name: '忠诚汪汪', icon: '🐶', skill: '【汪汪飞扑】扣除目标 20 点体力' },
-  { id: 'panda', name: '功夫熊猫', icon: '🐼', skill: '【竹林气功】扣除目标 25 点体力' },
-  { id: 'rednose', name: '小丑红鼻子', icon: '🤡', skill: '【戏谑魔术】扣除目标 20 点体力' },
-  { id: 'hippo', name: '呆萌河马', icon: '🦛', skill: '【水花重压】扣除目标 26 点体力' },
-  { id: 'horse', name: '狂奔小马', icon: '🐴', skill: '【旋风铁蹄】扣除目标 22 点体力' },
-  { id: 'donkeycat', name: '驴头猫', icon: '🐱🐴', skill: '【双重合鸣】扣除目标 24 点体力' },
-  { id: 'wuba', name: '糊涂乌霸', icon: '🐢💨', skill: '【糊涂风暴】扣除目标 20 点体力' },
-  { id: 'triangle', name: '三角兽', icon: '📐', skill: '【几何切割】扣除目标 25 点体力' },
-  { id: 'beetle', name: '铁甲甲虫', icon: '🪲', skill: '【角撞碎石】扣除目标 23 点体力' },
-  { id: 'shoe', name: '踏风战鞋', icon: '👟', skill: '【踏碎凌霄】扣除目标 25 点体力' },
-  { id: 'oil', name: '能量机油', icon: '🛢️', skill: '【涡轮喷射】扣除目标 28 点体力' },
-  { id: 'liubang', name: '汉高祖刘邦', icon: '👑', skill: '【大风起兮】扣除目标 30 点体力' }
+  { id: 'pig', name: '飞天小猪', icon: '🐷', skill: '【神猪天降重压】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'turtle', name: '稳赢神龟', icon: '🐢', skill: '【玄武金刚螺旋】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'chicken', name: '战斗小鸡', icon: '🐔', skill: '【只因天雷暴击】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'cat', name: '摸鱼猫猫', icon: '🐱', skill: '【绝影幻影爪】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'owl', name: '熬夜猫头鹰', icon: '🦉', skill: '【奥术星界冲击】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'dog', name: '忠诚汪汪', icon: '🐶', skill: '【天狗啸月破空】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'panda', name: '功夫熊猫', icon: '🐼', skill: '【国宝降龙掌】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'rednose', name: '小丑红鼻子', icon: '🤡', skill: '【奇迹魔术爆炸】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'hippo', name: '呆萌河马', icon: '🦛', skill: '【滔天巨浪吞噬】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'horse', name: '狂奔小马', icon: '🐴', skill: '【赤兔奔雷踏】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'donkeycat', name: '驴头猫', icon: '🫏', skill: '【混元霹雳蹬】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'wuba', name: '萌妖胡巴', icon: '🌱', skill: '【万妖怒涛水龙】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'triangle', name: '三角兽', icon: '📐', skill: '【次元三棱切割】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'beetle', name: '铁甲甲虫', icon: '🪲', skill: '【创世神球陨石】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'shoe', name: '踏风战鞋', icon: '👟', skill: '【黄金切尔西破颜】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'oil', name: '能量机油', icon: '🛢️', skill: '【烈焰机油爆燃】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'liubang', name: '汉高祖刘邦', icon: '👑', skill: '【赤霄神剑斩白蛇】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'toe', name: '脚趾头', icon: '🦶', skill: '【抠出三室一厅】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'arowana', name: '龙鱼', icon: '🐠', skill: '【金龙摆尾翻江浪】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'squirtle', name: '杰尼龟', icon: '🐢', skill: '【水炮墨镜铁头功】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'buckteeth', name: '兔子牙', icon: '🦷', skill: '【暴风超能大门牙】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' }
  ];
 
  async function api(path='',method='GET',body){
@@ -109,7 +113,7 @@
     card.append(head,skill,action);
     return card;
    }));
-   mascotNotice('已同步 17 位吉祥物攻击授权密码。修改后点击保存即可生效。');
+   mascotNotice('已同步 21 位吉祥物攻击授权密码。修改后点击保存即可生效。');
   }catch(e){
    mascotNotice(e.message);
   }
@@ -125,7 +129,7 @@
     currentPasswords[id]=inp.value.trim()||'2501';
    });
    await api('/mascot-passwords','PUT',{passwords:currentPasswords});
-   mascotNotice('已成功保存所有 17 位吉祥物的攻击授权密码！');
+   mascotNotice('已成功保存所有 21 位吉祥物的攻击授权密码！');
   }catch(e){
    mascotNotice(e.message);
   }finally{

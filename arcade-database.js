@@ -204,6 +204,54 @@ export const mascots=[
       {name:'大风起兮真龙天子',emoji:'🧭',image:'/assets/liubang-5.jpg',motto:'【夺宝奇兵】秘宝神钥在手，大风起兮云飞扬，威加海内兮归故乡！'},
       {name:'万古汉魂·汉高祖神尊',emoji:'👑',image:'/assets/liubang-1.jpg',motto:'【五位一体】安得猛士兮守四方！护佑 25计算机1班 威震四海！'}
     ]
+  },
+  {
+    id:'toe',baseName:'脚趾头',name:'脚趾头',emoji:'🦶',
+    attackSkill:{name:'抠出三室一厅',icon:'🦶',baseDamage:25,damage:25,desc:'当场脚趾抠地抠出三室一厅，造成巨额破防伤害！'},
+    forms:[
+      {name:'小脚丫',emoji:'🦶',motto:'白白嫩嫩，迈出探索世界第一步。'},
+      {name:'灵动大脚趾',emoji:'👣',motto:'灵活有力，走路带风。'},
+      {name:'人字拖狂战士',emoji:'🩴',motto:'穿上人字拖，迈出六亲不认的霸气步伐。'},
+      {name:'黄金大脚趾',emoji:'✨',motto:'脚踏祥云，步步生莲，威风凛凛！'},
+      {name:'抠地狂魔脚趾皇',emoji:'🏰',motto:'尴尬力爆棚，当场抠出一座紫禁城！'},
+      {name:'踏碎虚空·创世圣脚',emoji:'👑',motto:'一脚定乾坤，踏平前方所有坎坷与Bug！'}
+    ]
+  },
+  {
+    id:'arowana',baseName:'龙鱼',name:'龙鱼',emoji:'🐠',
+    attackSkill:{name:'金龙摆尾翻江浪',icon:'🌊',baseDamage:25,damage:25,desc:'金鳞耀目，巨尾拍出千层惊涛骇浪，造成巨额祥瑞水瀑伤害！'},
+    forms:[
+      {name:'小银龙鱼',emoji:'🐟',motto:'灵动游弋，银光闪烁。'},
+      {name:'红尾金龙',emoji:'🐠',motto:'金鳞初显，富贵吉祥。'},
+      {name:'极品过背金龙',emoji:'✨',motto:'金光贯顶，满缸瑞气迎门。'},
+      {name:'招财化龙鱼',emoji:'🐉',motto:'鱼跃龙门，身聚万千气运！'},
+      {name:'九霄金鳞龙皇',emoji:'👑',motto:'翱翔九天，福泽庇佑全班！'},
+      {name:'鸿蒙始祖太皇龙鱼',emoji:'🌌',motto:'真龙降世，气吞万里如虎！'}
+    ]
+  },
+  {
+    id:'squirtle',baseName:'杰尼龟',name:'杰尼龟',emoji:'🐢',
+    attackSkill:{name:'水炮墨镜铁头功',icon:'💧',baseDamage:25,damage:25,desc:'戴上黑色墨镜，射出超高压水炮与铁头撞击！'},
+    forms:[
+      {name:'小杰尼龟',emoji:'🐢',motto:'圆圆脑袋，杰尼杰尼~'},
+      {name:'墨镜杰尼龟',emoji:'🕶️',motto:'戴上墨镜，杰尼军团霸气登场。'},
+      {name:'卡咪龟',emoji:'🌊',motto:'耳朵尾巴长出羽毛，水波荡漾。'},
+      {name:'钢铁水炮水箭龟',emoji:'💥',motto:'背负双联高压水炮，轰穿一切阻碍！'},
+      {name:'超级水箭龟',emoji:'🛡️',motto:'三管巨炮合一，海啸连环轰炸！'},
+      {name:'极巨化灭世水神龟',emoji:'👑',motto:'汪洋主宰，无坚不摧的水系霸王！'}
+    ]
+  },
+  {
+    id:'buckteeth',baseName:'兔子牙',name:'兔子牙',emoji:'🦷',
+    attackSkill:{name:'暴风超能大门牙',icon:'🐰',baseDamage:25,damage:25,desc:'两颗闪闪发光的大门牙闪电连环狂啃，造成疯狂破壳暴击！'},
+    forms:[
+      {name:'两颗大门牙',emoji:'🦷',motto:'白白净净，啃胡萝卜嘎嘣脆。'},
+      {name:'萌萌兔牙仔',emoji:'🐰',motto:'咧嘴一笑露出两颗大门牙，萌翻全场。'},
+      {name:'碎核狂暴兔牙',emoji:'🥕',motto:'无坚不摧，坚果钢板照啃不误。'},
+      {name:'钻石闪光大门牙',emoji:'💎',motto:'闪闪发光亮瞎全场，硬度超越钻石！'},
+      {name:'破法超能兔神牙',emoji:'⚡',motto:'两道闪电门牙一合，啃碎一切系统Bug！'},
+      {name:'吞天噬地·至尊乾坤牙',emoji:'👑',motto:'万物皆可嚼碎，两颗神牙镇乾坤！'}
+    ]
   }
 ];
 
@@ -233,15 +281,17 @@ export function arcadeStore(query){
     arcadeSaveProfile:(owner,name,mascot)=>query('INSERT INTO class_arcade_profiles(owner,name,mascot) VALUES($1,$2,$3) ON CONFLICT(owner) DO UPDATE SET name=excluded.name,mascot=excluded.mascot',[owner,name,mascot]),
     arcadeFeed:(day,owner,mascot)=>query('INSERT INTO class_arcade_feeds(day,owner,mascot) VALUES($1,$2,$3) ON CONFLICT(day,owner,mascot) DO NOTHING',[day,owner,mascot]),
     async arcadeState(owner,day){
-      const [me,totals,fed,best,reactionLeaderboard,drawings,statsRow]=await Promise.all([
+      const [me,totals,fed,best,reactionLeaderboard,drawings,settingsRows]=await Promise.all([
         profile(owner),rows('SELECT mascot,COUNT(*) AS n FROM class_arcade_feeds GROUP BY mascot'),
         rows('SELECT mascot FROM class_arcade_feeds WHERE day=$1 AND owner=$2',[day,owner]),
         rows('SELECT score FROM class_arcade_scores WHERE owner=$1',[owner]),scores(owner),
         rows('SELECT '+drawingColumns+' FROM class_arcade_drawings d LEFT JOIN class_arcade_guesses g ON g.drawing=d.id AND g.owner=$1 WHERE d.deleted=0 ORDER BY d.date DESC,d.id DESC LIMIT 100',[owner]),
-        rows('SELECT value FROM class_settings WHERE key=$1',['mascot_battle_stats'])
+        rows("SELECT key,value FROM class_settings WHERE key IN ('mascot_battle_stats','mascot_battle_logs')")
       ]);
-      let stats={};
-      try{stats=JSON.parse(statsRow[0]?.value||'{}')}catch{}
+      let stats={},battleLogs=[];
+      try{stats=JSON.parse(settingsRows.find(r=>r.key==='mascot_battle_stats')?.value||'{}')}catch{}
+      try{battleLogs=JSON.parse(settingsRows.find(r=>r.key==='mascot_battle_logs')?.value||'[]')}catch{}
+      if(!Array.isArray(battleLogs))battleLogs=[];
       const penalties=stats.feedPenalties||{};
       const hitsMap=stats.hitsReceived||{};
       const todayAttacksMap=(stats.attacksToday||{})[day]||{};
@@ -252,10 +302,15 @@ export function arcadeStore(query){
         const formIdx=Math.min(m.forms.length-1,Math.floor(feeds/10));
         const currentForm=m.forms[formIdx];
         const nextForm=m.forms[formIdx+1]||null;
+        const level=1+formIdx;
         const isMaxLevel=formIdx>=m.forms.length-1;
+        const canAttack=level>=4;
         const todayAttacks=Number(todayAttacksMap[m.id]||0);
         const remainingAttacks=Math.max(0,3-todayAttacks);
         const hitsReceived=Number(hitsMap[m.id]||0);
+        const baseDamage=m.attackSkill?.baseDamage||m.attackSkill?.damage||25;
+        const levelBonus=Math.max(0,level-4)*10;
+        const damage=baseDamage+levelBonus;
         return {
           id:m.id,
           baseName:m.baseName,
@@ -266,10 +321,11 @@ export function arcadeStore(query){
           feeds,
           rawFeeds,
           formIndex:formIdx,
-          level:1+Math.floor(feeds/10),
+          level,
           isMaxLevel,
+          canAttack,
           maxLevel:m.forms.length,
-          skill:m.attackSkill,
+          skill:m.attackSkill?{...m.attackSkill,baseDamage,levelBonus,damage}:null,
           progress:isMaxLevel?10:feeds%10,
           needed:10,
           fed:fed.some(f=>f.mascot===m.id),
@@ -281,7 +337,7 @@ export function arcadeStore(query){
           hitsNeeded:3
         };
       });
-      return {day,pets,my:{...me,stickerCount:fed.length,bestReaction:best[0]?Number(best[0].score):null},reactionLeaderboard,drawings:drawings.map(mapDrawing)};
+      return {day,pets,battleLogs,my:{...me,stickerCount:fed.length,bestReaction:best[0]?Number(best[0].score):null},reactionLeaderboard,drawings:drawings.map(mapDrawing)};
     },
     async arcadeReaction(p){
       await query('INSERT INTO class_arcade_attempts(id,owner,rounds,score,day,date) SELECT $1,$2,$3,$4,$5,$6 WHERE (SELECT COUNT(*) FROM class_arcade_attempts WHERE owner=$2 AND day=$5)<30 ON CONFLICT(id) DO NOTHING',[p.id,p.owner,JSON.stringify(p.rounds),p.score,p.day,p.date]);

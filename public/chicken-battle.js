@@ -114,6 +114,15 @@
         }
       }
     } catch {}
+    try {
+      const resLogs = await fetch('/api/arcade/battle-logs', { signal: AbortSignal.timeout(5000) });
+      if (resLogs.ok) {
+        const dataLogs = await resLogs.json();
+        if (Array.isArray(dataLogs.battleLogs)) {
+          renderBattleLogsSection(dataLogs.battleLogs);
+        }
+      }
+    } catch {}
   }
 
   function showDmgPop(targetEl, text, isHeal = false) {
@@ -139,6 +148,64 @@
     if (count) count.textContent = hp + ' HP';
   }
 
+  // Real-time Battle Broadcast Section (Visible to Everyone)
+  function renderBattleLogsSection(logs = []) {
+    const petsPanel = $('#arcade-pets');
+    if (!petsPanel) return;
+    let broadcastSection = $('#mascot-battle-broadcast-section');
+    if (!broadcastSection) {
+      broadcastSection = el('div', undefined, 'battle-broadcast-section');
+      broadcastSection.id = 'mascot-battle-broadcast-section';
+      const head = el('div', undefined, 'battle-broadcast-head');
+      const title = el('h3', '⚔️ 吉祥物决斗实时战报 · 全班可见');
+      const desc = el('p', '吉祥物达到 4 级即可解锁攻击，每升一级伤害加成+10！对决伤害全员实时同步。', 'small-note');
+      head.append(title, desc);
+      const list = el('div', undefined, 'battle-broadcast-list');
+      list.id = 'mascot-battle-broadcast-list';
+      broadcastSection.append(head, list);
+
+      const targetBefore = petsPanel.querySelector('.pet-day-banner') || petsPanel.firstChild;
+      if (targetBefore && targetBefore.nextSibling) {
+        petsPanel.insertBefore(broadcastSection, targetBefore.nextSibling);
+      } else {
+        petsPanel.prepend(broadcastSection);
+      }
+    }
+
+    const list = $('#mascot-battle-broadcast-list');
+    if (!list) return;
+
+    if (!logs || !logs.length) {
+      list.replaceChildren(el('div', '暂无战斗对决记录。吉祥物达到 4 级后，输入密码即可发动攻击！', 'battle-empty-note'));
+      return;
+    }
+
+    list.replaceChildren(...logs.slice(0, 10).map(entry => {
+      const item = el('div', undefined, 'battle-log-item' + (entry.levelDropped ? ' level-drop' : ''));
+      const time = el('span', entry.time || '', 'battle-log-time');
+      const content = el('div', undefined, 'battle-log-content');
+      
+      const badgeAttacker = el('span', `${entry.attackerName} (Lv.${entry.attackerLevel})`, 'battle-badge attacker');
+      const vsSpan = el('span', ' 释放【' + (entry.skillName || '终极一击') + '】 ⚔️ ');
+      const badgeTarget = el('span', `${entry.targetName}`, 'battle-badge target');
+      const dmgSpan = el('strong', ` -${entry.damage} HP 💥`, 'battle-log-damage');
+      dmgSpan.title = `基础伤害 ${entry.baseDamage || 25} + Lv.${entry.attackerLevel}升阶加成 ${entry.levelBonus || 0} HP`;
+      
+      const detailP = el('p', undefined, 'battle-log-detail');
+      detailP.append(badgeAttacker, vsSpan, badgeTarget, dmgSpan);
+
+      const statusSpan = el('span', entry.levelDropped 
+        ? ` ⚠️ 目标累计受击3次已降级为 Lv.${entry.targetLevel}！需投票升回！`
+        : ` (目标剩余 ${entry.targetHp} HP)`
+      , entry.levelDropped ? 'battle-drop-warn' : 'battle-hp-status');
+
+      detailP.append(statusSpan);
+      content.append(detailP);
+      item.append(time, content);
+      return item;
+    }));
+  }
+
   // 3. Attack Modal
   let activeModal = null;
   function openAttackModal(attackerPet, allPets) {
@@ -149,7 +216,7 @@
 
     const h3 = el('h3', `⚔️ 释放【${attackerPet.skillName || '专属攻击'}】`);
     const leftAttacks = attackerPet.remainingAttacks != null ? attackerPet.remainingAttacks : 3;
-    const hint = el('p', `攻击方：${attackerPet.name}（Lv.${attackerPet.level} 巅峰形态） · 今日剩余攻击机会：${leftAttacks}/3 次 · 伤害值：${attackerPet.skillDamage || 20} HP`, 'small-note');
+    const hint = el('p', `攻击方：${attackerPet.name}（Lv.${attackerPet.level} 战斗姿态） · 今日剩余攻击机会：${leftAttacks}/3 次 · 攻击伤害：💥 ${attackerPet.skillDamage || 25} HP（Lv.4 解锁，每升一级伤害加成+10）`, 'small-note');
     const secureHint = el('p', '🛡️ 为防止他人滥用或冒用攻击，请输入管理员设置的授权密码。', 'small-note');
     secureHint.style.color = '#e67e22';
 
@@ -283,21 +350,22 @@
     // Gather pet metadata
     const petsMeta = Array.from(cards).map(card => {
       const id = card.dataset.arcadePet;
-      const isMaxLevel = card.dataset.isMaxLevel === 'true' || (parseInt(card.dataset.petLevel || '1', 10) >= 6);
       const level = parseInt(card.dataset.petLevel || '1', 10);
+      const isMaxLevel = card.dataset.isMaxLevel === 'true' || level >= 6;
+      const canAttack = card.dataset.canAttack === 'true' || level >= 4;
       const name = card.querySelector('h4')?.textContent?.split(' ')[0] || id;
       const skillName = card.dataset.skillName || '专属攻击';
       const skillDesc = card.dataset.skillDesc || '';
-      const skillDamage = parseInt(card.dataset.skillDamage || '20', 10);
+      const skillDamage = parseInt(card.dataset.skillDamage || '25', 10);
       const remainingAttacks = parseInt(card.dataset.remainingAttacks != null ? card.dataset.remainingAttacks : '3', 10);
       const todayAttacks = parseInt(card.dataset.todayAttacks || '0', 10);
       const hitsReceived = parseInt(card.dataset.hitsReceived || '0', 10);
       const hitsNeeded = parseInt(card.dataset.hitsNeeded || '3', 10);
-      return { id, isMaxLevel, level, name, skillName, skillDesc, skillDamage, remainingAttacks, todayAttacks, hitsReceived, hitsNeeded, card };
+      return { id, isMaxLevel, canAttack, level, name, skillName, skillDesc, skillDamage, remainingAttacks, todayAttacks, hitsReceived, hitsNeeded, card };
     });
 
     petsMeta.forEach(pet => {
-      const { card, id, isMaxLevel, skillName, skillDamage, remainingAttacks, todayAttacks } = pet;
+      const { card, id, isMaxLevel, canAttack, level, skillName, skillDamage, remainingAttacks, todayAttacks } = pet;
 
       // 1. HP Bar
       if (!card.querySelector('.pet-hp-bar-wrap')) {
@@ -340,13 +408,13 @@
 
       skillArea.replaceChildren();
 
-      if (isMaxLevel) {
+      if (canAttack) {
         card.classList.add('pet-max-unlocked');
-        const attackBtn = el('button', remainingAttacks > 0 ? `⚔️ 释放【${skillName}】(剩${remainingAttacks}次)` : `⚔️ 今日攻击已达上限 (3/3)`, 'mascot-attack-btn');
+        const attackBtn = el('button', remainingAttacks > 0 ? `⚔️ 释放【${skillName}】(剩${remainingAttacks}次 · 造成${skillDamage}伤害)` : `⚔️ 今日攻击已达上限 (3/3)`, 'mascot-attack-btn');
         attackBtn.type = 'button';
         attackBtn.disabled = remainingAttacks <= 0;
         attackBtn.title = remainingAttacks > 0
-          ? `今日已攻击 ${todayAttacks}/3 次 · 对其他吉祥物造成 ${skillDamage} 点体力伤害（需输入管理密码）`
+          ? `今日已攻击 ${todayAttacks}/3 次 · 当前等级造成 ${skillDamage} 点伤害（基础25 + 升阶加成${Math.max(0, level - 4) * 10}点）`
           : '每个吉祥物每日限发动 3 次攻击，今日次数已用尽';
         attackBtn.addEventListener('click', e => {
           e.stopPropagation();
@@ -355,7 +423,7 @@
         skillArea.append(attackBtn);
       } else {
         card.classList.remove('pet-max-unlocked');
-        const lockedBadge = el('div', `🔒 Lv.6 满级解锁【${skillName}】`, 'mascot-locked-skill');
+        const lockedBadge = el('div', `🔒 Lv.4 解锁【${skillName}】(当前 Lv.${level} · 还需升 ${4 - level} 级)`, 'mascot-locked-skill');
         skillArea.append(lockedBadge);
       }
     });
@@ -477,9 +545,16 @@
     attachMascotsHpAndBattle();
     renderHighSchoolFunSection();
 
-    window.addEventListener('class-mascots-rendered', () => {
+    window.addEventListener('class-mascots-rendered', e => {
       attachMascotsHpAndBattle();
+      if (e.detail && Array.isArray(e.detail.battleLogs)) {
+        renderBattleLogsSection(e.detail.battleLogs);
+      }
     });
+
+    setInterval(() => {
+      if (!document.hidden) syncHpsFromServer();
+    }, 10000);
 
     const mascotsContainer = $('#arcade-mascots');
     if (mascotsContainer) {

@@ -479,5 +479,116 @@
   50% { opacity: 1; transform: scale(1.02); }
 }
 
+/* 实时决斗战报与全员可见伤害广播 */
+.battle-broadcast-section {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 16px 0 24px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+.battle-broadcast-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 10px;
+}
+.battle-broadcast-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.battle-broadcast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.battle-empty-note {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  padding: 16px 0;
+}
+.battle-log-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  border-left: 3px solid #3498db;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.battle-log-item.level-drop {
+  border-left-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.08);
+}
+.battle-log-time {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.battle-log-content {
+  flex: 1;
+}
+.battle-log-detail {
+  margin: 0;
+}
+.battle-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.battle-badge.attacker {
+  background: rgba(230, 126, 34, 0.15);
+  color: #d35400;
+}
+.battle-badge.target {
+  background: rgba(52, 152, 219, 0.15);
+  color: #2980b9;
+}
+.battle-log-damage {
+  color: #c0392b;
+  font-weight: 800;
+  margin-left: 4px;
+  font-size: 13px;
+  text-shadow: 0 0 1px rgba(192, 57, 43, 0.4);
+}
+.battle-drop-warn {
+  color: #e74c3c;
+  font-weight: 700;
+  margin-left: 6px;
+}
+.battle-hp-status {
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 4px;
+}
+.pet-atk-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #d35400;
+  background: rgba(230, 126, 34, 0.12);
+  border: 1px solid rgba(230, 126, 34, 0.3);
+  padding: 3px 6px;
+  border-radius: 4px;
+  text-align: center;
+  margin: 4px 0 6px;
+}
+
+
 
 

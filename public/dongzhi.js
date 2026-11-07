@@ -5,37 +5,106 @@
   const $$ = s => document.querySelectorAll(s);
 
   // --------------------------------------------------------------------------
-  // 1. 页面滚动进度条
+  // 1. 飘雪粒子引擎 (手机端自动减半粒子，轻量丝滑)
   // --------------------------------------------------------------------------
-  function initProgressBar() {
-    const bar = $('#reading-progress-bar');
-    if (!bar) return;
-    window.addEventListener('scroll', () => {
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = scrollHeight > 0 ? (window.scrollY / scrollHeight) * 100 : 0;
-      bar.style.width = `${Math.min(100, Math.max(0, progress))}%`;
-    }, { passive: true });
+  let snowCanvas = null;
+  let snowCtx = null;
+  let snowFlakes = [];
+  let isSnowing = true;
+  let snowAnimFrame = null;
+
+  function initSnow() {
+    snowCanvas = $('#snow-canvas');
+    if (!snowCanvas) return;
+    snowCtx = snowCanvas.getContext('2d');
+
+    function resizeSnow() {
+      snowCanvas.width = window.innerWidth;
+      snowCanvas.height = window.innerHeight;
+      createFlakes();
+    }
+
+    function createFlakes() {
+      const isMobile = window.innerWidth < 768;
+      const count = isMobile ? 24 : 60; // 手机端节约性能
+      snowFlakes = [];
+      for (let i = 0; i < count; i++) {
+        snowFlakes.push({
+          x: Math.random() * snowCanvas.width,
+          y: Math.random() * snowCanvas.height,
+          radius: Math.random() * (isMobile ? 2.5 : 3.2) + 1,
+          speed: Math.random() * 0.9 + 0.4,
+          drift: Math.random() * 0.6 - 0.3,
+          opacity: Math.random() * 0.6 + 0.3
+        });
+      }
+    }
+
+    function renderSnow() {
+      if (!isSnowing) return;
+      snowCtx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
+      snowCtx.fillStyle = '#ffffff';
+
+      for (let i = 0; i < snowFlakes.length; i++) {
+        const f = snowFlakes[i];
+        snowCtx.globalAlpha = f.opacity;
+        snowCtx.beginPath();
+        snowCtx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+        snowCtx.fill();
+
+        f.y += f.speed;
+        f.x += f.drift;
+
+        if (f.y > snowCanvas.height) {
+          f.y = -5;
+          f.x = Math.random() * snowCanvas.width;
+        }
+        if (f.x > snowCanvas.width) f.x = 0;
+        if (f.x < 0) f.x = snowCanvas.width;
+      }
+
+      snowAnimFrame = requestAnimationFrame(renderSnow);
+    }
+
+    window.addEventListener('resize', resizeSnow, { passive: true });
+    resizeSnow();
+    renderSnow();
+
+    // 绑定飘雪开关
+    $('#snow-toggle-btn')?.addEventListener('click', () => {
+      isSnowing = !isSnowing;
+      const btn = $('#snow-toggle-btn');
+      const text = $('#snow-status-text');
+      if (btn) btn.classList.toggle('active', isSnowing);
+      if (text) text.textContent = isSnowing ? '开' : '关';
+
+      if (isSnowing) {
+        renderSnow();
+      } else {
+        cancelAnimationFrame(snowAnimFrame);
+        snowCtx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
+      }
+    });
   }
 
   // --------------------------------------------------------------------------
-  // 2. 纯 Web Audio API 炉火噼啪与水沸白噪音 (不自动播放，尊重用户选择并保存会话)
+  // 2. 围炉暖音 (纯 Web Audio API 炉火与微沸声，支持偏好记住)
   // --------------------------------------------------------------------------
   let audioCtx = null;
   let isAudioPlaying = false;
   let noiseNode = null;
-  let gainNode = null;
   let crackleInterval = null;
 
   function initAudio() {
-    // 检查 sessionStorage 中的偏好状态
-    const saved = sessionStorage.getItem('solstice_audio_enabled');
+    const saved = sessionStorage.getItem('solstice_audio_warm');
     if (saved === '1') {
-      // 浏览器策略不允许未经交互直接自动出声，用户点击任意键或按钮后即可触发
-      const promptResume = () => {
+      const resumeOnTouch = () => {
         toggleWarmAudio(true);
-        window.removeEventListener('click', promptResume);
+        window.removeEventListener('click', resumeOnTouch);
+        window.removeEventListener('touchstart', resumeOnTouch);
       };
-      window.addEventListener('click', promptResume, { once: true });
+      window.addEventListener('click', resumeOnTouch, { once: true });
+      window.addEventListener('touchstart', resumeOnTouch, { once: true });
     }
 
     $('#audio-toggle-btn')?.addEventListener('click', () => toggleWarmAudio());
@@ -48,7 +117,6 @@
         if (!audioCtx) audioCtx = new AudioContext();
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
-        // 持续温和低频白噪音模拟温暖水沸与室内微光
         const bufferSize = audioCtx.sampleRate * 2;
         const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const output = noiseBuffer.getChannelData(0);
@@ -64,86 +132,78 @@
         noiseNode.buffer = noiseBuffer;
         noiseNode.loop = true;
 
-        gainNode = audioCtx.createGain();
-        gainNode.gain.setValueAtTime(0.06, audioCtx.currentTime);
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
 
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(420, audioCtx.currentTime);
+        filter.frequency.setValueAtTime(380, audioCtx.currentTime);
 
         noiseNode.connect(filter);
         filter.connect(gainNode);
         gainNode.connect(audioCtx.destination);
         noiseNode.start();
 
-        // 随机木柴噼啪爆裂
         crackleInterval = setInterval(() => {
           if (!isAudioPlaying || !audioCtx) return;
-          if (Math.random() < 0.6) playCracklePop();
-        }, 360);
+          try {
+            const crackOsc = audioCtx.createOscillator();
+            const crackGain = audioCtx.createGain();
+            crackOsc.type = 'triangle';
+            crackOsc.frequency.setValueAtTime(80 + Math.random() * 400, audioCtx.currentTime);
+            crackGain.gain.setValueAtTime(0.04 * Math.random(), audioCtx.currentTime);
+            crackGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.04);
+            crackOsc.connect(crackGain);
+            crackGain.connect(audioCtx.destination);
+            crackOsc.start();
+            crackOsc.stop(audioCtx.currentTime + 0.04);
+          } catch {}
+        }, 320);
 
         isAudioPlaying = true;
-        sessionStorage.setItem('solstice_audio_enabled', '1');
-        $('#audio-toggle-btn')?.classList.add('active');
-        const txt = $('#audio-status-text');
-        if (txt) txt.textContent = '[开]';
-      } catch (e) {
-        console.warn('Audio start failed:', e);
+        sessionStorage.setItem('solstice_audio_warm', '1');
+      } catch (err) {
+        console.warn('Audio start error:', err);
       }
     } else {
-      stopWarmAudio();
+      if (noiseNode) {
+        try { noiseNode.stop(); noiseNode.disconnect(); } catch {}
+        noiseNode = null;
+      }
+      if (crackleInterval) {
+        clearInterval(crackleInterval);
+        crackleInterval = null;
+      }
+      isAudioPlaying = false;
+      sessionStorage.setItem('solstice_audio_warm', '0');
     }
+
+    const btn = $('#audio-toggle-btn');
+    const text = $('#audio-status-text');
+    if (btn) btn.classList.toggle('active', isAudioPlaying);
+    if (text) text.textContent = isAudioPlaying ? '开' : '关';
   }
 
-  function stopWarmAudio() {
-    isAudioPlaying = false;
-    sessionStorage.setItem('solstice_audio_enabled', '0');
-    if (crackleInterval) clearInterval(crackleInterval);
-    if (noiseNode) {
-      try { noiseNode.stop(); } catch {}
-      noiseNode = null;
-    }
-    $('#audio-toggle-btn')?.classList.remove('active');
-    const txt = $('#audio-status-text');
-    if (txt) txt.textContent = '[关]';
-  }
-
-  function playCracklePop() {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(200 + Math.random() * 380, audioCtx.currentTime);
-    g.gain.setValueAtTime(0.025, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.04);
-    osc.connect(g);
-    g.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.04);
-  }
-
-  function playFeedbackBlip(pitch = 520) {
+  function playTapBeep(freq = 540) {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!audioCtx && AudioContext) audioCtx = new AudioContext();
-      if (!audioCtx) return;
+      if (!audioCtx) audioCtx = new AudioContext();
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const osc = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
+      const gain = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(pitch, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(pitch * 1.5, audioCtx.currentTime + 0.12);
-      g.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
-      osc.connect(g);
-      g.connect(audioCtx.destination);
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.12);
+      osc.stop(audioCtx.currentTime + 0.06);
     } catch {}
   }
 
   // --------------------------------------------------------------------------
-  // 3. 今晚自毁倒计时
+  // 3. 今晚24:00自动自毁倒计时
   // --------------------------------------------------------------------------
   let expireTimestamp = new Date('2026-11-08T00:00:00+08:00').getTime();
 
@@ -169,15 +229,15 @@
   }
 
   function triggerSelfDestruct() {
-    const modal = $('#destruct-fullscreen-modal');
-    if (modal) modal.style.display = 'flex';
+    const overlay = $('#self-destruct-overlay');
+    if (overlay) overlay.style.display = 'flex';
     setTimeout(() => {
       window.location.href = '/';
-    }, 6000);
+    }, 5000);
   }
 
   // --------------------------------------------------------------------------
-  // 4. 饺子 VS 汤圆俱乐部数据与真实投票交互
+  // 4. 饺子 VS 汤圆投票 (连接真实 API)
   // --------------------------------------------------------------------------
   async function loadSolsticeState() {
     try {
@@ -213,37 +273,37 @@
     $('#dumpling-percent-text').textContent = `${dPct}%`;
     $('#tangyuan-percent-text').textContent = `${tPct}%`;
 
-    const leadBadge = $('#metrics-lead-badge');
+    const leadText = $('#score-lead-text');
     if (dCount > tCount) {
-      leadBadge.textContent = 'DUMPLING CLUB LEADING 🥟';
+      leadText.textContent = `🥟 水饺派领先 ${dCount - tCount} 票！`;
     } else if (tCount > dCount) {
-      leadBadge.textContent = 'TANGYUAN CLUB LEADING 🍡';
+      leadText.textContent = `🍡 汤圆派领先 ${tCount - dCount} 票！`;
     } else {
-      leadBadge.textContent = 'DEAD HEAT // 势均力敌';
+      leadText.textContent = '双方旗鼓相当，平分秋色！';
     }
 
-    const dCard = $('#club-dumpling-card');
-    const tCard = $('#club-tangyuan-card');
+    const dCard = $('#camp-dumpling-box');
+    const tCard = $('#camp-tangyuan-box');
     const dBtn = $('#vote-dumpling-btn');
     const tBtn = $('#vote-tangyuan-btn');
     const statusMsg = $('#pk-my-status');
 
-    dCard.classList.toggle('voted-active', votes.myVote === 'dumpling');
-    tCard.classList.toggle('voted-active', votes.myVote === 'tangyuan');
-    dBtn.classList.toggle('is-active-vote', votes.myVote === 'dumpling');
-    tBtn.classList.toggle('is-active-vote', votes.myVote === 'tangyuan');
+    dCard.classList.toggle('voted', votes.myVote === 'dumpling');
+    tCard.classList.toggle('voted', votes.myVote === 'tangyuan');
+    dBtn.classList.toggle('voted', votes.myVote === 'dumpling');
+    tBtn.classList.toggle('voted', votes.myVote === 'tangyuan');
 
     if (votes.myVote === 'dumpling') {
-      statusMsg.innerHTML = '✔ 你已为 <strong>北方饺子俱乐部 (DUMPLING CLUB)</strong> 投出一票！';
+      statusMsg.innerHTML = '✔ 你已为 <strong>北方饺子派</strong> 投出一票！';
     } else if (votes.myVote === 'tangyuan') {
-      statusMsg.innerHTML = '✔ 你已为 <strong>南方汤圆俱乐部 (TANGYUAN CLUB)</strong> 投出一票！';
+      statusMsg.innerHTML = '✔ 你已为 <strong>南方汤圆派</strong> 投出一票！';
     } else {
-      statusMsg.textContent = '点击上方俱乐部按钮，投下你在 25 计 1 的真实专属票！';
+      statusMsg.textContent = '点击上方按钮，投出你在 25 计算机 1 班的专属一票！';
     }
   }
 
   async function voteCamp(choice) {
-    playFeedbackBlip(600);
+    playTapBeep(640);
     try {
       const res = await fetch('/api/solstice/vote', {
         method: 'POST',
@@ -256,15 +316,111 @@
       }
       const data = await res.json();
       updateBattleUI(data.votes);
+      const campName = choice === 'dumpling' ? '北方饺子派 🥟' : '南方汤圆派 🍡';
+      alert(`投票成功！你已站队【${campName}】！`);
     } catch {
-      alert('网络连接未响应，请稍后重试');
+      alert('网络开小差了，稍后重试');
     }
   }
 
   // --------------------------------------------------------------------------
-  // 5. 14 位官方吉祥物真实图鉴 (CLASS 25 CHARACTER ARCHIVE)
+  // 5. 咕嘟咕嘟捞幸运签
   // --------------------------------------------------------------------------
-  const mascotArchiveData = [
+  const fortuneSlipsData = [
+    {
+      icon: '🥟',
+      name: '韭菜鸡蛋水饺 · 编译零Bug符',
+      quote: '“编译一次通过，高数90+，期末大作业答辩全场鼓掌！”',
+      mascot: '鞋子送你加厚保暖冬袜，踩碎一切困难！'
+    },
+    {
+      icon: '🍡',
+      name: '黑芝麻流心汤圆 · 甜蜜满溢符',
+      quote: '“心事如流心温润，代码如丝般顺滑，天天好心情！”',
+      mascot: '刘邦身披王者神装，护体金光伴你暖冬！'
+    },
+    {
+      icon: '🥟',
+      name: '牛肉大葱水饺 · 能量满格符',
+      quote: '“精神百倍活力在线，早八不困，熬夜赶Due依然神采奕奕！”',
+      mascot: '龙鱼金光闪闪，招财纳福庇佑全班！'
+    },
+    {
+      icon: '🍡',
+      name: '花生碎糯米圆子 · 步步高升符',
+      quote: '“好事总会‘花’生，绩点节节攀升，所有努力皆有回响！”',
+      mascot: '脚趾头尴尬时刻抠出一座紫禁城，豪迈向前！'
+    },
+    {
+      icon: '🥟',
+      name: '三鲜暖胃水饺 · 锦鲤附体符',
+      quote: '“抽签必中，考前划重点全考，各种好运悄然而至！”',
+      mascot: '杰尼龟水炮轰穿一切阻碍，墨镜一戴谁也不爱！'
+    },
+    {
+      icon: '🍡',
+      name: '鲜肉小汤圆 · 无敌防御符',
+      quote: '“发量浓密如初，发际线坚挺如泰山，思路连贯如泉涌！”',
+      mascot: '兔子牙两颗大门牙闪闪发光，万物皆可嚼碎！'
+    },
+    {
+      icon: '🥟',
+      name: '猪肉白菜水饺 · 全班团圆符',
+      quote: '“25计算机1班全员到齐，一个都不能少，平安喜乐一整年！”',
+      mascot: '油全员加满油，一路顺滑飙到底！'
+    },
+    {
+      icon: '🍡',
+      name: '桂花酒酿小圆子 · 心想事成符',
+      quote: '“所有的代码奔赴星海，所有的付出皆有回响，冬至安康！”',
+      mascot: '小丑先生鼻尖一点红，同窗携手笑对生活！'
+    }
+  ];
+
+  let currentFortune = null;
+
+  function drawFortune() {
+    playTapBeep(780);
+    const pot = $('#pot-cooking-box');
+    if (pot) {
+      pot.classList.add('shaking');
+      setTimeout(() => pot.classList.remove('shaking'), 600);
+    }
+
+    const slip = fortuneSlipsData[Math.floor(Math.random() * fortuneSlipsData.length)];
+    currentFortune = slip;
+
+    $('#t-icon').textContent = slip.icon;
+    $('#t-name').textContent = slip.name;
+    $('#t-quote').textContent = slip.quote;
+    $('#t-mascot').textContent = slip.mascot;
+
+    const card = $('#talisman-result-card');
+    if (card) {
+      card.style.display = 'block';
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function copyFortune() {
+    if (!currentFortune) return;
+    const shareText = `🏮【25计1冬至幸运签】${currentFortune.name}\n✨ 签文：${currentFortune.quote}\n🐾 吉祥物：${currentFortune.mascot}\n🥟 祝全班冬至快乐，代码零Bug，期末高分！`;
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert('已复制幸运签文，快发到微信/QQ班级群分享你的吉运吧！');
+      }).catch(() => {
+        alert('复制成功！');
+      });
+    } else {
+      alert('已复制：\n\n' + shareText);
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 6. 14 位吉祥物冬至图鉴与底部抽屉 (Bottom Sheet)
+  // --------------------------------------------------------------------------
+  const mascotData = [
     {
       id: 'shoe',
       num: '01',
@@ -272,89 +428,87 @@
       emoji: '👟',
       trait: '狂暴跑者',
       skill: '黄金切尔西破颜踢',
-      damage: 'Lv.4 造成 35 点破颜暴击伤害，每升一级伤害递增。',
-      quote: '英雄可以受委屈，但不能踩我的切尔西！今天冬至不踢人，送大家纯棉暖宝宝！',
-      lore: '步履不停，踏碎一切困难。在班级里守护每一位早八赶课的同学，从不迟到。',
-      secret: '🥾 黄金切尔西极速充能完毕！早八冲刺速度 +100%！'
+      damage: 'Lv.4 飞身暴踢敌方，造成 35 点破颜暴击伤害，每升一级伤害递增。',
+      quote: '步履不停，踏碎一切困难！冬至记得穿加厚保暖袜，早八赶课不挨冻！',
+      lore: '步履不停，踏碎一切困难。早八赶课最快的神器，冬至为全班送上温暖棉袜。',
+      secret: '🧦 赠送你一双加厚保暖羊毛袜，暖脚一整冬！'
     },
     {
       id: 'oil',
       num: '02',
       name: '油',
       emoji: '🛢️',
-      trait: '高能推力',
-      skill: '烈焰机油大爆燃',
-      damage: 'Lv.4 倾倒高能航空机油引燃烈焰，造成 35 点炽热爆燃伤害。',
-      quote: '全宇宙的核心动力源泉！今晚热油专炸黄金酥肉，给25计1全员加餐！',
-      lore: '全员加满油，一路顺滑飙到底。润滑每一个卡死的编译器，让代码飞速狂飙。',
-      secret: '🔥 航空燃油注入！代码执行延迟降为 0ms！'
+      trait: '极速先锋',
+      skill: '绝对顺滑超导狂飙',
+      damage: 'Lv.4 喷射超导高能机油，造成 35 点顺滑冲击伤害，每升一级伤害递增。',
+      quote: '全员加满油，一路顺滑飙到底！数九严寒也不凝固，动力拉满！',
+      lore: '全员加满油，一路顺滑飙到底。永远热气腾腾，让班级每个齿轮飞速运转。',
+      secret: '⛽ 加满 98 号极品高能汽油！战斗力狂飙！'
     },
     {
       id: 'liubang',
       num: '03',
       name: '刘邦',
-      emoji: '👑',
       img: '/assets/liubang-1.jpg',
-      trait: '汉高祖神尊',
-      skill: '赤霄神剑斩白蛇',
-      damage: 'Lv.4 拔出三尺赤霄神剑，造成 40 点帝王至尊伤害。',
-      quote: '今天不斩白蛇只剥红薯！大风起兮云飞扬，吃饱期末不慌张！',
-      lore: '泗水亭长威加海内！拥有五款王者神装立绘随等级解锁，护佑全班威震四海。',
-      secret: '⚔️ 汉王神装切换！“安得猛士兮守四方，高数期末通通及格！”'
+      trait: '汉高祖天王',
+      skill: '统御战场霸王护盾',
+      damage: 'Lv.4 大招全地图传送并展开霸王金光护盾，造成 35 点范围神圣伤害。',
+      quote: '大风起兮云飞扬，五款王者神装全开！今夜围炉，与全班同袍共饮此杯！',
+      lore: '大风起兮云飞扬，五款王者神装随升级解锁！气吞山河，庇佑全班安宁。',
+      secret: '👑 汉高祖霸气举杯！全班今夜皆为上卿！'
     },
     {
       id: 'toe',
       num: '04',
       name: '脚趾头',
       emoji: '🦶',
-      trait: '破防狂战士',
-      skill: '抠出三室一厅',
-      damage: 'Lv.4 当场脚趾抠地抠出三室一厅，造成 25 点绝对破防伤害。',
-      quote: '穿上防冻小棉套啦！就算当场抠出三室一厅，也是温暖的地暖豪宅！',
-      lore: '白白嫩嫩，迈出探索世界第一步。尴尬力爆棚时当场抠出一座紫禁城。',
-      secret: '🏰 豪华精装地暖三室一厅拔地而起！全班拎包入住！'
+      trait: '隐秘行者',
+      skill: '神圣抠地十级地震',
+      damage: 'Lv.4 尴尬时刻猛烈抠地，抠出紫禁城引发 35 点地震震荡伤害。',
+      quote: '步履不停，尴尬时刻抠出一座紫禁城！即使天寒地冻，也要挺直腰杆向前冲！',
+      lore: '步履不停，尴尬时刻抠出一座紫禁城。最接地气的伙伴，陪你走过每一步。',
+      secret: '🏰 地底升起一座宏伟的紫禁城！全班免单！'
     },
     {
       id: 'arowana',
       num: '05',
       name: '龙鱼',
       emoji: '🐠',
-      trait: '祥瑞锦鲤',
-      skill: '金龙摆尾翻江浪',
-      damage: 'Lv.4 巨尾拍出千层惊涛骇浪，造成 25 点祥瑞水瀑伤害。',
-      quote: '鱼跃龙门，身聚万千气运！考前拜龙鱼，高数离散全通过！',
-      lore: '金鳞耀目，灵动游弋。传说在它身边写代码的同学，运行一次就能AC通过。',
-      secret: '✨ 龙鱼赐福金光普照！期末考卷全中重点！'
+      trait: '瑞兽锦鳞',
+      skill: '龙跃九天真火吐息',
+      damage: 'Lv.4 腾空化龙喷出烈焰真火，造成 35 点神兽水火交融伤害。',
+      quote: '金鳞耀目，招财纳福庇佑全班！冬至转运，期末逢考必过，年年有余！',
+      lore: '金鳞耀目，招财纳福庇佑全班！在静水深流中蕴藏翻江倒海的真龙之力。',
+      secret: '🌊 金光护体！为你降下一场暴富红包雨！'
     },
     {
       id: 'squirtle',
       num: '06',
       name: '杰尼龟',
       emoji: '🐢',
-      trait: '水系霸主',
-      skill: '水炮墨镜铁头功',
-      damage: 'Lv.4 射出超高压水炮与铁头撞击，造成 25 点硬核水系伤害。',
-      quote: '杰尼军团红围巾已戴好！背负双联高压水炮，今晚喷出的全是热奶茶！',
-      lore: '圆圆脑袋，杰尼杰尼~ 戴上黑色墨镜时霸气外露，冬天最喜欢缩在被窝里。',
-      secret: '🕶️ 杰尼军团墨镜登场！热奶茶水炮已发射！'
+      trait: '潮流墨镜客',
+      skill: '究极高压水炮狂轰',
+      damage: 'Lv.4 蓄力喷射超高压水柱，造成 35 点毁灭性水系冲击伤害。',
+      quote: '墨镜一戴谁也不爱，水炮轰穿一切阻碍！冬至多喝热水，期末嘎嘎乱杀！',
+      lore: '墨镜一戴谁也不爱，水炮轰穿一切阻碍！潇洒从容，酷盖气质拉满。',
+      secret: '🕶️ 戴上酷炫黑超墨镜！帅气值翻倍！'
     },
     {
       id: 'buckteeth',
       num: '07',
       name: '兔子牙',
       emoji: '🦷',
-      trait: '坚果粉碎机',
-      skill: '暴风超能大门牙',
-      damage: 'Lv.4 门牙闪电连环狂啃，造成 25 点疯狂破壳伤害。',
-      quote: '咔嚓咔嚓连环啃大冻梨！冰凉爽脆，大门牙吃嘛嘛香，坚果钢板照啃不误！',
+      trait: '利齿萌神',
+      skill: '极寒暴击两颗大门牙',
+      damage: 'Lv.4 亮出巨大门牙猛烈咬碎一切坚冰，造成 35 点碎石破坚伤害。',
+      quote: '两颗大门牙闪闪发光，万物皆可嚼碎！不管是冻梨还是汇编代码，一口咬碎！',
       lore: '两颗闪闪发光的大门牙，萌翻全场。不管是东北冻梨还是硬核汇编都能啃下。',
-      secret: '🍐 嘎嘣脆！大门牙一秒解决掉一盘冰梨！'
+      secret: '🍐 嘎嘣脆！大门牙一秒吃掉一盘东北冰梨！'
     },
     {
       id: 'rednose',
       num: '08',
       name: '小丑先生',
-      emoji: '👦',
       img: '/assets/rednose-classmate.svg',
       trait: '欢笑守护神',
       skill: '奇迹魔术大爆炸',
@@ -437,202 +591,112 @@
     }
   ];
 
-  let currentDossierIndex = 0;
+  let currentMascotIdx = 0;
 
-  function renderMascotArchive() {
-    const grid = $('#mascot-archive-grid');
+  function renderMascots() {
+    const grid = $('#mascot-mobile-grid');
     if (!grid) return;
 
-    grid.innerHTML = mascotArchiveData.map((m, idx) => {
+    grid.innerHTML = mascotData.map((m, idx) => {
       const avatarHtml = m.img
-        ? `<img class="avatar-graphic-img" src="${m.img}" alt="${m.name}" loading="lazy">`
-        : `<span class="avatar-graphic-emoji">${m.emoji}</span>`;
+        ? `<img class="mascot-img-tag" src="${m.img}" alt="${m.name}" loading="lazy">`
+        : `<span class="mascot-emoji-tag">${m.emoji}</span>`;
 
       return `
-        <article class="archive-character-card" data-idx="${idx}" tabindex="0" role="button" aria-label="查看 ${m.name} 档案">
-          <span class="card-index-pill">NO.${m.num}</span>
-          <div class="card-avatar-stage">
+        <article class="mascot-touch-card" data-idx="${idx}" tabindex="0" role="button" aria-label="查看 ${m.name} 详情">
+          <div class="card-num-badge">NO.${m.num}</div>
+          <div class="mascot-thumb-stage">
             ${avatarHtml}
           </div>
-          <h4 class="card-character-name">${m.name}</h4>
-          <span class="card-role-trait">${m.trait}</span>
-          <span class="card-inspect-cta">VIEW DOSSIER ➔</span>
+          <h4 class="mascot-title-name">${m.name}</h4>
+          <span class="mascot-role-pill">${m.trait}</span>
+          <span class="tap-detail-hint">点击查看详情 ➔</span>
         </article>
       `;
     }).join('');
 
-    $$('.archive-character-card').forEach(card => {
+    $$('.mascot-touch-card').forEach(card => {
       card.addEventListener('click', () => {
-        openMascotDossier(Number(card.dataset.idx));
+        openMascotSheet(Number(card.dataset.idx));
       });
       card.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          openMascotDossier(Number(card.dataset.idx));
+          openMascotSheet(Number(card.dataset.idx));
         }
       });
     });
   }
 
-  function openMascotDossier(index) {
-    currentDossierIndex = (index + mascotArchiveData.length) % mascotArchiveData.length;
-    const m = mascotArchiveData[currentDossierIndex];
-    playFeedbackBlip(680);
+  function openMascotSheet(idx) {
+    currentMascotIdx = (idx + mascotData.length) % mascotData.length;
+    const m = mascotData[currentMascotIdx];
+    playTapBeep(720);
 
-    $('#dossier-id-tag').textContent = `#${m.num}`;
-    $('#dossier-name-text').textContent = m.name;
-    $('#dossier-trait-text').textContent = m.trait;
-    $('#dossier-skill-text').textContent = m.skill;
-    $('#dossier-quote-text').textContent = `“${m.quote}”`;
-    $('#dossier-lore-text').textContent = m.lore;
-    $('#dossier-damage-text').textContent = m.damage;
+    $('#sheet-name-text').textContent = m.name;
+    $('#sheet-trait-text').textContent = m.trait;
+    $('#sheet-skill-text').textContent = m.skill;
+    $('#sheet-quote-text').textContent = `“${m.quote}”`;
+    $('#sheet-lore-text').textContent = m.lore;
+    $('#sheet-damage-text').textContent = m.damage;
 
-    const avatarBox = $('#dossier-avatar-container');
+    const box = $('#sheet-avatar-box');
     if (m.img) {
-      avatarBox.innerHTML = `<img src="${m.img}" alt="${m.name}">`;
+      box.innerHTML = `<img src="${m.img}" alt="${m.name}">`;
     } else {
-      avatarBox.innerHTML = `<span class="large-emoji">${m.emoji}</span>`;
+      box.innerHTML = `<span style="font-size: 52px; line-height: 1;">${m.emoji}</span>`;
     }
 
-    const overlay = $('#dossier-modal-overlay');
-    overlay.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+    const overlay = $('#mascot-sheet-overlay');
+    if (overlay) {
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
   }
 
-  function closeMascotDossier() {
-    const overlay = $('#dossier-modal-overlay');
-    if (overlay) overlay.style.display = 'none';
+  function closeMascotSheet() {
+    const overlay = $('#mascot-sheet-overlay');
+    if (overlay) overlay.classList.remove('open');
     document.body.style.overflow = '';
   }
 
   // --------------------------------------------------------------------------
-  // 6. 冬日幸运签抽签机 (WINTER FORTUNE MACHINE)
+  // 7. 星空便签愿望墙 (连接真实 API)
   // --------------------------------------------------------------------------
-  const fortuneSlipsData = [
-    {
-      serial: 'NO. 2501-A',
-      name: '韭菜鸡蛋水饺 · 编译零Bug符',
-      quote: '“编译一次通过，高数90+，期末大作业答辩全场鼓掌！”',
-      mascot: '鞋子',
-      code: 'exit(0); // 顺畅如飞'
-    },
-    {
-      serial: 'NO. 2501-B',
-      name: '黑芝麻爆浆汤圆 · 高甜充能符',
-      quote: '“今晚枕头格外软，早八有人帮忙占前排好位，精神饱满！”',
-      mascot: '龙鱼',
-      code: 'sleep_hours >= 8.0'
-    },
-    {
-      serial: 'NO. 2501-C',
-      name: '鲜虾玉米水饺 · 锦鲤附体符',
-      quote: '“抢选修课秒进心仪课，抽卡次次保底提前出金，生活处处有惊喜！”',
-      mascot: '刘邦',
-      code: 'fortune.boost(999)'
-    },
-    {
-      serial: 'NO. 2501-D',
-      name: '花生流沙汤圆 · 极速破案符',
-      quote: '“遇到再离奇的段错误，都能在30秒内一眼定位到是哪一行！”',
-      mascot: '小丑先生',
-      code: 'gdb.inspect_instant()'
-    },
-    {
-      serial: 'NO. 2501-E',
-      name: '牛肉大葱水饺 · 强筋健骨符',
-      quote: '“体测轻松满分，天寒地冻手脚永远暖呼呼，冬天绝不感冒！”',
-      mascot: '脚趾头',
-      code: 'immunity.max = true'
-    },
-    {
-      serial: 'NO. 2501-F',
-      name: '抹茶红豆汤圆 · 发量浓密符',
-      quote: '“发量浓密如初，发际线坚挺如泰山，思路连贯如泉涌！”',
-      mascot: '杰尼龟',
-      code: 'hair_density.protect()'
-    },
-    {
-      serial: 'NO. 2501-G',
-      name: '猪肉白菜水饺 · 全班团圆符',
-      quote: '“25计算机1班全员到齐，一个都不能少，平安喜乐一整年！”',
-      mascot: '油',
-      code: 'class2501.together()'
-    },
-    {
-      serial: 'NO. 2501-H',
-      name: '桂花酒酿小圆子 · 心想事成符',
-      quote: '“所有的代码奔赴星海，所有的付出皆有回响，冬至安康！”',
-      mascot: '兔子牙',
-      code: 'dreams.fulfilled = true'
-    }
-  ];
-
-  function dispenseFortune() {
-    playFeedbackBlip(750);
-    const card = $('#fortune-ticket-card');
-    if (!card) return;
-
-    card.classList.remove('card-drawing');
-    void card.offsetWidth; // 触发 reflow 重置动画
-    card.classList.add('card-drawing');
-
-    const slip = fortuneSlipsData[Math.floor(Math.random() * fortuneSlipsData.length)];
-    $('#ticket-serial-id').textContent = slip.serial;
-    $('#ticket-name-text').textContent = slip.name;
-    $('#ticket-quote-text').textContent = slip.quote;
-    $('#ticket-mascot-author').textContent = slip.mascot;
-    $('#ticket-code-tag').textContent = slip.code;
-  }
-
-  function copyFortuneText() {
-    const title = $('#ticket-name-text').textContent.trim();
-    const quote = $('#ticket-quote-text').textContent.trim();
-    const copyText = `🏮【25计1冬至幸运签】${title}\n✨ 签文：${quote}\n🥟 祝大家冬至快乐，代码零Bug，期末高分！`;
-
-    navigator.clipboard?.writeText(copyText).then(() => {
-      alert('已复制到剪贴板，快发到班级群分享你的冬至吉运吧！');
-    }).catch(() => {
-      alert('复制成功！');
-    });
-  }
-
-  // --------------------------------------------------------------------------
-  // 7. 星空便签墙真实数据与交互 (THE WISH WALL)
-  // --------------------------------------------------------------------------
-  const toneClasses = ['tone-paper', 'tone-lime', 'tone-coral', 'tone-midnight'];
+  const wishColors = ['w-amber', 'w-orange', 'w-mint', 'w-blue'];
 
   function renderWishes(wishes) {
-    const container = $('#wishes-pinboard-grid');
-    if (!container) return;
+    const flow = $('#wish-notes-flow');
+    if (!flow) return;
 
     if (!wishes || wishes.length === 0) {
-      container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--gray); font-family: var(--font-mono); padding: 40px;">暂无便签，成为今夜第一个贴上愿望的人吧！</div>';
+      flow.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--muted); padding: 30px; font-size: 13px;">暂无便签，快来写下全班今夜的第一条冬至愿望吧！</div>';
       return;
     }
 
-    container.innerHTML = wishes.map((w, idx) => {
-      const tone = toneClasses[idx % toneClasses.length];
+    flow.innerHTML = wishes.map((w, idx) => {
+      const colorClass = wishColors[idx % wishColors.length];
       return `
-        <article class="wish-slip-card ${tone}" data-id="${w.id}">
-          <div class="slip-header-meta">
-            <span class="slip-author-tag">📌 ${w.name}</span>
-            <span class="slip-time-tag">${w.time}</span>
+        <article class="wish-item-card ${colorClass}" data-id="${w.id}">
+          <div class="note-head-row">
+            <span class="note-author-label">🏮 ${w.name}</span>
+            <span class="note-time-label">${w.time}</span>
           </div>
-          <p class="slip-message-body">${w.text}</p>
-          <div class="slip-footer-bar">
-            <span style="font-family: var(--font-mono); font-size: 10px; opacity: 0.7;">CLASS 2501 NOTE</span>
-            <button type="button" class="slip-warm-btn ${w.liked ? 'liked' : ''}" data-id="${w.id}">
-              <span>🔥 暖一暖</span> <span class="like-tally">${w.likes}</span>
+          <p class="note-body-text">${w.text}</p>
+          <div class="note-foot-row">
+            <span style="font-size: 11px; opacity: 0.7;">25计1专属夜话</span>
+            <button type="button" class="btn-send-warm ${w.liked ? 'liked' : ''}" data-id="${w.id}">
+              <span>🔥 送暖</span> <strong class="like-num">${w.likes}</strong>
             </button>
           </div>
         </article>
       `;
     }).join('');
 
-    $$('.slip-warm-btn').forEach(btn => {
+    $$('.btn-send-warm').forEach(btn => {
       btn.addEventListener('click', async e => {
         e.stopPropagation();
-        playFeedbackBlip(620);
+        playTapBeep(660);
         try {
           const res = await fetch('/api/solstice/wish/like', {
             method: 'POST',
@@ -649,29 +713,29 @@
       });
     });
 
-    $$('.wish-slip-card').forEach(card => {
+    $$('.wish-item-card').forEach(card => {
       card.addEventListener('click', () => {
-        const text = card.querySelector('.slip-message-body')?.textContent || '';
-        const author = card.querySelector('.slip-author-tag')?.textContent || '';
+        const text = card.querySelector('.note-body-text')?.textContent || '';
+        const author = card.querySelector('.note-author-label')?.textContent || '';
         alert(`${author} 的冬至愿望：\n\n“${text}”`);
       });
     });
   }
 
-  async function submitWishNote(e) {
+  async function submitWish(e) {
     e.preventDefault();
-    const nameField = $('#wish-author-field');
-    const textField = $('#wish-content-field');
-    const text = textField.value.trim();
+    const nameInput = $('#wish-name-input');
+    const textInput = $('#wish-text-input');
+    const text = textInput.value.trim();
     if (!text) return;
 
-    playFeedbackBlip(700);
+    playTapBeep(700);
     try {
       const res = await fetch('/api/solstice/wish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: nameField.value.trim(),
+          name: nameInput.value.trim(),
           text
         })
       });
@@ -680,24 +744,24 @@
         return;
       }
       const data = await res.json();
-      textField.value = '';
+      textInput.value = '';
       renderWishes(data.wishes);
-      alert('📌 你的冬至便签已成功固定在 25 计 1 愿望墙上！');
+      alert('🏮 你的冬至愿望已成功放飞上墙！祝愿望成真！');
     } catch {
       alert('提交失败，请检查网络后重试');
     }
   }
 
   // --------------------------------------------------------------------------
-  // 初始化与全局绑定
+  // 初始化总入口
   // --------------------------------------------------------------------------
   function init() {
-    initProgressBar();
+    initSnow();
     initAudio();
-    renderMascotArchive();
+    renderMascots();
     loadSolsticeState();
 
-    // 倒计时每秒更新
+    // 倒计时
     updateCountdown();
     setInterval(updateCountdown, 1000);
 
@@ -705,30 +769,30 @@
     $('#vote-dumpling-btn')?.addEventListener('click', () => voteCamp('dumpling'));
     $('#vote-tangyuan-btn')?.addEventListener('click', () => voteCamp('tangyuan'));
 
-    // 幸运签抽签机
-    $('#machine-trigger-btn')?.addEventListener('click', dispenseFortune);
-    $('#ticket-redraw-btn')?.addEventListener('click', dispenseFortune);
-    $('#ticket-copy-btn')?.addEventListener('click', copyFortuneText);
+    // 幸运签抽签
+    $('#draw-trigger-btn')?.addEventListener('click', drawFortune);
+    $('#btn-redraw-fortune')?.addEventListener('click', drawFortune);
+    $('#btn-copy-fortune')?.addEventListener('click', copyFortune);
 
-    // 档案模态窗交互
-    $('#dossier-close-btn')?.addEventListener('click', closeMascotDossier);
-    $('#dossier-modal-overlay')?.addEventListener('click', e => {
-      if (e.target.id === 'dossier-modal-overlay') closeMascotDossier();
+    // 吉祥物底部抽屉
+    $('#sheet-close-btn')?.addEventListener('click', closeMascotSheet);
+    $('#mascot-sheet-overlay')?.addEventListener('click', e => {
+      if (e.target.id === 'mascot-sheet-overlay') closeMascotSheet();
     });
-    $('#dossier-prev-btn')?.addEventListener('click', () => openMascotDossier(currentDossierIndex - 1));
-    $('#dossier-next-btn')?.addEventListener('click', () => openMascotDossier(currentDossierIndex + 1));
-    $('#dossier-secret-btn')?.addEventListener('click', () => {
-      playFeedbackBlip(880);
-      const m = mascotArchiveData[currentDossierIndex];
-      alert(`【${m.name} · 绝密彩蛋触发】\n\n${m.secret}`);
+    $('#sheet-prev-btn')?.addEventListener('click', () => openMascotSheet(currentMascotIdx - 1));
+    $('#sheet-next-btn')?.addEventListener('click', () => openMascotSheet(currentMascotIdx + 1));
+    $('#sheet-easter-egg-btn')?.addEventListener('click', () => {
+      playTapBeep(880);
+      const m = mascotData[currentMascotIdx];
+      alert(`【${m.name} · 冬至专属彩蛋】\n\n${m.secret}`);
     });
 
     window.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeMascotDossier();
+      if (e.key === 'Escape') closeMascotSheet();
     });
 
     // 愿望墙提交
-    $('#wish-submit-form')?.addEventListener('submit', submitWishNote);
+    $('#wish-form')?.addEventListener('submit', submitWish);
   }
 
   if (document.readyState === 'loading') {

@@ -58,32 +58,36 @@
    1. 梗图工厂 (Meme Studio)
    -------------------------------------------------------------------------- */
 .meme-studio-layout {
-  display: grid;
-  grid-template-columns: minmax(320px, 460px) minmax(320px, 1fr);
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
   gap: 28px;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .canvas-stage-box {
+  flex: 0 0 440px;
+  width: 440px;
+  max-width: 440px;
+  min-width: 320px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  width: 100%;
-  min-width: 0;
+  box-sizing: border-box;
 }
 
 .canvas-container {
   position: relative;
   width: 100%;
-  max-width: 460px;
-  min-width: 260px;
   aspect-ratio: 1 / 1;
+  min-height: 320px;
   background: #f0eee6;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -92,6 +96,7 @@
   touch-action: none;
   cursor: crosshair;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 #meme-canvas {
@@ -107,17 +112,19 @@
   text-align: center;
   line-height: 1.6;
   width: 100%;
-  max-width: 460px;
+  max-width: 440px;
   margin: 0 auto;
 }
 
 /* 控件操作区 */
 .meme-controls-box {
+  flex: 1 1 0%;
   display: flex;
   flex-direction: column;
   gap: 18px;
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .ctrl-group-title {
@@ -615,20 +622,28 @@
 /* 平板与中等屏幕 (<= 980px) */
 @media (max-width: 980px) {
   .meme-studio-layout {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: center;
     gap: 20px;
     padding: 20px;
   }
   .canvas-stage-box {
-    max-width: 520px;
-    margin: 0 auto;
-    width: 100%;
-  }
-  .canvas-container {
+    flex: none;
     max-width: 480px;
     width: 100%;
+    min-width: 0;
+    margin: 0 auto;
+  }
+  .canvas-container {
+    max-width: 460px;
+    width: 100%;
+    min-height: auto;
+  }
+  .canvas-hint-note {
+    max-width: 460px;
   }
   .meme-controls-box {
+    flex: none;
     max-width: 580px;
     margin: 0 auto;
     width: 100%;
@@ -660,33 +675,53 @@
     gap: 6px;
     margin-bottom: 14px;
     padding-bottom: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .meme-tab-btn {
-    padding: 6px 12px;
-    font-size: 12px;
-    min-height: 38px;
+    padding: 8px 14px;
+    font-size: 13px;
+    min-height: 40px;
+    flex-shrink: 0;
   }
   .meme-studio-layout {
     padding: 14px 12px;
     gap: 16px;
     border-radius: 10px;
+    flex-direction: column;
+    align-items: stretch;
   }
   .canvas-stage-box {
+    flex: none;
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
+    margin: 0 auto;
   }
   .canvas-container {
+    width: 100%;
     max-width: 100%;
     min-width: 0;
     border-radius: 6px;
   }
-  .canvas-hint {
+  .canvas-hint-note {
     font-size: 11px;
     line-height: 1.5;
     padding: 0 4px;
+    max-width: 100%;
   }
   .ctrl-group-title {
     font-size: 12px;
     margin-bottom: 6px;
+  }
+  .template-scroll-strip {
+    gap: 8px;
+    padding-bottom: 6px;
+  }
+  .template-chip {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-height: 44px;
   }
   .text-tool-row {
     flex-direction: column;
@@ -696,7 +731,9 @@
   .text-tool-row input[type="text"] {
     width: 100%;
     min-width: 0;
-    height: 40px;
+    height: 42px;
+    font-size: 15px;
+    border-radius: 6px;
     flex: none;
   }
   .text-tool-row .tool-btn-sm {
@@ -706,8 +743,28 @@
   }
   #meme-delete-layer-btn {
     width: 100%;
-    min-height: 38px;
+    min-height: 40px;
     justify-content: center;
+  }
+  .slider-row {
+    font-size: 12px;
+    gap: 10px;
+  }
+  .color-dots-bar {
+    gap: 10px;
+  }
+  .color-swatch {
+    width: 28px;
+    height: 28px;
+  }
+  .sticker-scroll-bar {
+    gap: 8px;
+    padding-bottom: 6px;
+  }
+  .sticker-btn {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 22px;
   }
   .studio-actions-bar {
     display: grid;
@@ -715,18 +772,17 @@
     gap: 8px;
     padding-top: 12px;
   }
-  .studio-actions-bar .tool-btn-sm {
-    width: 100%;
-    min-height: 40px;
-    justify-content: center;
-  }
+  .studio-actions-bar .tool-btn-sm,
   .studio-actions-bar .action-main-btn {
     width: 100%;
     min-width: 0;
-    padding: 10px 8px;
-    font-size: 12px;
     min-height: 42px;
+    padding: 10px 6px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    box-sizing: border-box;
   }
   .crazy-box-wrap {
     padding: 14px 12px;

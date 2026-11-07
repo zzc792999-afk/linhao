@@ -321,15 +321,25 @@
   // --------------------------------------------------------------------------
   // 交互事件：拖动、缩放、旋转 (支持鼠标与移动端触摸)
   // --------------------------------------------------------------------------
+  function fitCanvasContainer() {
+    const container = document.getElementById('canvas-container');
+    if (container && container.clientWidth > 0) {
+      container.style.height = `${container.clientWidth}px`;
+    }
+  }
+
   function getCanvasCoords(e) {
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    const touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+    const clientX = touch ? touch.clientX : e.clientX;
+    const clientY = touch ? touch.clientY : e.clientY;
+    const width = rect.width > 0 ? rect.width : 1;
+    const height = rect.height > 0 ? rect.height : 1;
+    const scaleX = canvas.width / width;
+    const scaleY = canvas.height / height;
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      x: Math.max(0, Math.min(canvas.width, (clientX - rect.left) * scaleX)),
+      y: Math.max(0, Math.min(canvas.height, (clientY - rect.top) * scaleY))
     };
   }
 
@@ -797,6 +807,7 @@
     if (tabKey === 'gallery' || tabKey === 'battle') {
       loadMemesGallery();
     } else if (tabKey === 'studio') {
+      fitCanvasContainer();
       renderCanvas();
     }
   }
@@ -806,6 +817,8 @@
   // --------------------------------------------------------------------------
   function initMemeLab() {
     initCanvas();
+    fitCanvasContainer();
+    window.addEventListener('resize', fitCanvasContainer);
     initCrazySection();
     initTranslator();
 

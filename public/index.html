@@ -2,8 +2,31 @@
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#172b24"><title>25计算机1 · 我们的主场</title><link rel="stylesheet" href="style.css?v=4.3.5"><link rel="stylesheet" href="board.css?v=4.3.5"><link rel="stylesheet" href="arcade.css?v=4.3.5"><link rel="stylesheet" href="campus.css?v=4.3.5"><link rel="stylesheet" href="chicken-battle.css?v=4.3.5"><link rel="stylesheet" href="meme-lab.css?v=4.4.0"></head>
 <body data-mode="preview"><a class="hub-skip" href="#arcade">跳到班级游乐厅</a>
-<header><a class="logo" href="#home"><span class="logo-icon">&lt;/&gt;</span>25计算机1班<span class="logo-sub">CLASS OF 2025</span></a><nav aria-label="主导航"><a href="#home">首页</a><a href="#messages">班级广场</a><a href="#playground">抽象研究所</a><a href="#arcade">游戏中心</a><a href="#album">班级相册</a><a href="#class-tools">我的空间</a></nav><button id="theme" aria-label="切换深浅主题" title="切换深浅主题">◐</button></header>
-<nav class="sticky-category-bar" id="sticky-category-bar" aria-label="快捷分区导航"><div class="category-scroll-track" id="category-scroll-track"><a href="#home" class="category-pill active" data-nav-target="home">✦ 首页</a><a href="#arcade" class="category-pill" data-nav-target="arcade">🎮 游乐厅</a><a href="#targets" class="category-pill" data-nav-target="targets">🎯 靶场 <span class="nav-badge hot">HOT</span></a><a href="#teachers" class="category-pill" data-nav-target="teachers">👨‍🏫 评教 <span class="nav-badge new">NEW</span></a><a href="#suggestions" class="category-pill" data-nav-target="suggestions">📮 意见箱 <span class="nav-badge new">NEW</span></a><a href="#people" class="category-pill" data-nav-target="people">🌸 班花班草</a><a href="#mascots" class="category-pill" data-nav-target="mascots">🐾 吉祥物</a><a href="#album" class="category-pill" data-nav-target="album">📸 相册</a><a href="#messages" class="category-pill" data-nav-target="messages">💬 留言墙</a><a href="#class-film" class="category-pill" data-nav-target="class-film">🎬 班级影像</a><a href="#playground" class="category-pill" data-nav-target="playground">☀️ 课间打卡</a><a href="#social-area" class="category-pill" data-nav-target="social-area">🧩 班级记忆</a><a href="#class-tools" class="category-pill" data-nav-target="class-tools">📋 班务工具</a></div></nav>
+<header><a class="logo" href="#home"><span class="logo-icon">&lt;/&gt;</span>25计算机1班<span class="logo-sub">CLASS OF 2025</span></a><nav aria-label="主导航"><a href="#home">首页</a><a href="/dongzhi" id="header-dongzhi-link" style="display:none; color:#e67e22; font-weight:bold;">🏮 冬至夜话</a><a href="#messages">班级广场</a><a href="#playground">抽象研究所</a><a href="#arcade">游戏中心</a><a href="#album">班级相册</a><a href="#class-tools">我的空间</a></nav><button id="theme" aria-label="切换深浅主题" title="切换深浅主题">◐</button></header>
+<nav class="sticky-category-bar" id="sticky-category-bar" aria-label="快捷分区导航"><div class="category-scroll-track" id="category-scroll-track"><a href="/dongzhi" class="category-pill" id="dongzhi-nav-pill" style="display:none; background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; border-color: #e74c3c;">🏮 冬至夜话 <span class="nav-badge hot" style="background:#ffc107;color:#0b1522;">今晚限定</span></a><a href="#home" class="category-pill active" data-nav-target="home">✦ 首页</a><a href="#arcade" class="category-pill" data-nav-target="arcade">🎮 游乐厅</a><a href="#targets" class="category-pill" data-nav-target="targets">🎯 靶场 <span class="nav-badge hot">HOT</span></a><a href="#teachers" class="category-pill" data-nav-target="teachers">👨‍🏫 评教 <span class="nav-badge new">NEW</span></a><a href="#suggestions" class="category-pill" data-nav-target="suggestions">📮 意见箱 <span class="nav-badge new">NEW</span></a><a href="#people" class="category-pill" data-nav-target="people">🌸 班花班草</a><a href="#mascots" class="category-pill" data-nav-target="mascots">🐾 吉祥物</a><a href="#album" class="category-pill" data-nav-target="album">📸 相册</a><a href="#messages" class="category-pill" data-nav-target="messages">💬 留言墙</a><a href="#class-film" class="category-pill" data-nav-target="class-film">🎬 班级影像</a><a href="#playground" class="category-pill" data-nav-target="playground">☀️ 课间打卡</a><a href="#social-area" class="category-pill" data-nav-target="social-area">🧩 班级记忆</a><a href="#class-tools" class="category-pill" data-nav-target="class-tools">📋 班务工具</a></div></nav>
+<div class="dongzhi-festive-banner" id="dongzhi-festive-banner" style="display:none;">
+  <div class="dz-banner-inner">
+    <span class="dz-banner-icon">🏮</span>
+    <div class="dz-banner-text">
+      <strong>【今夜限定】25计算机1班 · 冬至专属暖冬夜话 🥟</strong>
+      <span>北方饺子 VS 南方汤圆全班大PK、咕嘟咕嘟捞幸运签、放飞星空孔明灯！（⚠️ 今晚24:00自动自毁删除）</span>
+    </div>
+    <a href="/dongzhi" class="dz-banner-enter-btn">立即进入专属夜话 ➔</a>
+  </div>
+</div>
+<script>
+  (() => {
+    const expire = new Date('2026-11-08T00:00:00+08:00').getTime();
+    if (Date.now() < expire) {
+      const b = document.getElementById('dongzhi-festive-banner');
+      const p = document.getElementById('dongzhi-nav-pill');
+      const h = document.getElementById('header-dongzhi-link');
+      if (b) b.style.display = 'block';
+      if (p) p.style.display = 'inline-flex';
+      if (h) h.style.display = 'inline-block';
+    }
+  })();
+</script>
 <main><section class="hero" id="home">
   <div class="hero-copy">
     <div class="eyebrow"><span class="dot"></span> CLASS OF 2025 · 25计算机1班</div>

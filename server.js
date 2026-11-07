@@ -3,6 +3,7 @@ import {boardRoutes} from './board.js';
 import {arcadeRoutes} from './arcade.js';
 import {campusRoutes} from './campus.js';
 import {memeRoutes} from './meme.js';
+import {solsticeRoutes, isSolsticeExpired, cleanupSolsticeFiles} from './solstice.js';
 import {adminRoutes,classDay} from './admin.js';
 import http from 'node:http';
 import sharp from 'sharp';
@@ -24,6 +25,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
   const arcade=arcadeRoutes(db,req=>readJson(req,180000));
   const campus=campusRoutes(db,req=>readJson(req,180000));
   const meme=memeRoutes(db,req=>readJson(req,4*1024*1024));
+  const solstice=solsticeRoutes(db,req=>readJson(req,16384),publicRoot);
   const rates = new Map();
   let processingPhotos=0;
   const server = http.createServer(async (req, res) => {
@@ -44,12 +46,23 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       if (!url.pathname.startsWith('/api/')) {
         if (!['GET','HEAD'].includes(req.method)) return send(405,{error:'不支持的请求方式'});
         const pathname = decodeURIComponent(url.pathname);
-        const relative = pathname === '/' ? 'index.html' : ['/admin','/admin/'].includes(pathname) ? 'admin.html' : pathname.slice(1);
+        const relative = pathname === '/' ? 'index.html' : ['/admin','/admin/'].includes(pathname) ? 'admin.html' : ['/dongzhi','/dongzhi/','/solstice'].includes(pathname) ? 'dongzhi.html' : pathname.slice(1);
+        if (['dongzhi.html','dongzhi.css','dongzhi.js'].includes(relative)) {
+          if (isSolsticeExpired()) {
+            cleanupSolsticeFiles(publicRoot);
+            return send(404, {error:'冬至活动已随今晚结束，该专属网页已按约定自动下线并彻底删除。感谢大家的陪伴！'});
+          }
+        }
         // Only serve explicit public files, never the database or server source.
         const isAllowedAsset = /^assets\/(p[123]\.jpg|rednose-classmate\.svg|class-film\.mp4|liubang-\d(-full)?\.jpg)$/.test(relative);
-        const allowedPages = ['index.html','admin.html','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','chicken-battle.css','chicken-battle.js','meme-lab.css','meme-lab.js','fun.js','app.js','style.css'];
+        const allowedPages = ['index.html','admin.html','dongzhi.html','dongzhi.css','dongzhi.js','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','chicken-battle.css','chicken-battle.js','meme-lab.css','meme-lab.js','fun.js','app.js','style.css'];
         if (!isAllowedAsset && !allowedPages.includes(relative)) return send(404,{error:'页面不存在'});
-        let content = readFileSync(path.join(publicRoot, relative));
+        let content;
+        try {
+          content = readFileSync(path.join(publicRoot, relative));
+        } catch {
+          return send(404, {error:'页面不存在'});
+        }
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
         const type = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.svg':'image/svg+xml','.mp4':'video/mp4'}[path.extname(relative)];
@@ -92,6 +105,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       if(await arcade(req,res,url,owner,send))return;
       if(await campus(req,res,url,owner,send))return;
       if(await meme(req,res,url,owner,send))return;
+      if(await solstice(req,res,url,owner,send))return;
       if(req.method==='GET'&&url.pathname==='/api/fun')return send(200,await db.fun(owner,classDay()));
       if(req.method==='PUT'&&url.pathname==='/api/checkin'){
         const body=await readJson(req);

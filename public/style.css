@@ -1141,24 +1141,79 @@ body.dark .mag-card-badge.tag-purple { background: #291e3d; color: #dcd0f7; bord
 
 /* Mobile Media Queries for Magazine Section */
 @media (max-width: 850px) {
+  .home-magazine-section {
+    padding: 16px 4% 28px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
   .magazine-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .magazine-primary,
+  .magazine-secondary {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   .mag-card {
     padding: 18px 16px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .mag-topic-content,
+  .mag-topic-actions,
+  .mag-topic-tags,
+  .mag-card-head,
+  .mag-recent-preview,
+  .mag-preview-item,
+  .preview-body,
+  .mag-events-list,
+  .mag-event-row,
+  .mag-meme-body,
+  .mag-meme-sticker,
+  .mag-games-grid {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .preview-text {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .mag-games-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .home-magazine-section {
-    padding: 16px 4% 28px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 }
 
 @media (max-width: 500px) {
-  .mag-games-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .home-magazine-section {
+    padding: 14px 12px 24px;
+  }
+  .mag-card {
+    padding: 16px 14px;
+    border-radius: 10px;
+  }
+  .mag-topic-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .mag-topic-actions .button {
+    width: 100%;
+    justify-content: center;
   }
 }
 

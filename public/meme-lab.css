@@ -87,7 +87,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  min-height: 320px;
+  min-height: 0;
   background: #f0eee6;
   border: 1px solid var(--line);
   border-radius: 8px;

@@ -819,6 +819,10 @@
     initCanvas();
     fitCanvasContainer();
     window.addEventListener('resize', fitCanvasContainer);
+    const container = document.getElementById('canvas-container');
+    if (window.ResizeObserver && container) {
+      new ResizeObserver(() => fitCanvasContainer()).observe(container);
+    }
     initCrazySection();
     initTranslator();
 

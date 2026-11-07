@@ -737,6 +737,10 @@ body.cozy-winter-body {
   backdrop-filter: blur(4px);
 }
 
+.bottom-sheet-overlay.open {
+  display: flex !important;
+}
+
 .bottom-sheet-panel {
   background: #17243c;
   border-top: 2px solid var(--dz-gold);

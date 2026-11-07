@@ -350,7 +350,7 @@
         const handleY = curLayer.y + (-bounds.h / 2 - 24) * Math.cos(rad);
         const distRot = Math.hypot(pos.x - handleX, pos.y - handleY);
 
-        if (distRot < 20) {
+        if (distRot < 30) {
           dragMode = 'rotate';
           isDragging = true;
           initialLayerState = { ...curLayer };
@@ -360,7 +360,7 @@
 
         // 缩放手柄位置 (右下角)
         const cornerDist = Math.hypot(pos.x - (curLayer.x + bounds.w / 2), pos.y - (curLayer.y + bounds.h / 2));
-        if (cornerDist < 25) {
+        if (cornerDist < 35) {
           dragMode = 'scale';
           isDragging = true;
           initialLayerState = { ...curLayer };
@@ -376,7 +376,7 @@
         const bounds = getLayerBounds(layer);
         const dx = pos.x - layer.x;
         const dy = pos.y - layer.y;
-        if (Math.abs(dx) <= bounds.w / 2 + 10 && Math.abs(dy) <= bounds.h / 2 + 10) {
+        if (Math.abs(dx) <= bounds.w / 2 + 16 && Math.abs(dy) <= bounds.h / 2 + 16) {
           hit = i;
           break;
         }
@@ -796,6 +796,8 @@
     });
     if (tabKey === 'gallery' || tabKey === 'battle') {
       loadMemesGallery();
+    } else if (tabKey === 'studio') {
+      renderCanvas();
     }
   }
 

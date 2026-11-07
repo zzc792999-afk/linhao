@@ -3,245 +3,392 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0d1b2a">
-  <title>🏮 25计算机1班 · 冬至专属夜话 🥟</title>
-  <link rel="stylesheet" href="dongzhi.css?v=1.0.0">
+  <meta name="theme-color" content="#151B32">
+  <title>WINTER RIOT — 25计算机1班冬至专属夜话 · 冬日不设限</title>
+  <link rel="stylesheet" href="dongzhi.css?v=2.0.0">
 </head>
-<body class="solstice-body">
-  <!-- 漫天落雪 Canvas 背景 -->
-  <canvas id="snow-canvas" aria-hidden="true"></canvas>
+<body class="winter-riot-body">
+  <!-- 页面顶部滚动进度指示器 -->
+  <div class="reading-progress-bar" id="reading-progress-bar"></div>
 
-  <!-- 顶部悬浮控制栏 -->
-  <header class="solstice-nav">
-    <a href="/" class="nav-back-link">
-      <span class="back-arrow">←</span> 返回班级主页
-    </a>
-    <div class="nav-controls">
-      <button type="button" class="ctrl-pill-btn" id="snow-toggle-btn" title="开关飘雪效果">
-        <span class="icon">❄️</span> 飘雪 <span id="snow-status-text">开</span>
+  <!-- 顶部极简现代导航栏 -->
+  <header class="riot-navbar">
+    <div class="brand-col">
+      <span class="brand-badge">WINTER RIOT // 2026</span>
+      <a href="#hero" class="brand-title">25计算机1班 · 冬至专属夜话</a>
+    </div>
+    <div class="nav-actions">
+      <button type="button" class="nav-tool-btn" id="audio-toggle-btn" title="开关炉火微光与水沸白噪音">
+        <span class="btn-icon">🔥</span> 围炉声响 <span id="audio-status-text">[关]</span>
       </button>
-      <button type="button" class="ctrl-pill-btn" id="audio-toggle-btn" title="开关炉火微光与水沸白噪音">
-        <span class="icon">🔥</span> 围炉暖音 <span id="audio-status-text">关</span>
-      </button>
+      <a href="/" class="nav-tool-btn" title="返回班级网站主页">
+        ← 返回班级主页
+      </a>
     </div>
   </header>
 
-  <main class="solstice-container">
-    <!-- 头部限定横幅与自毁倒计时 -->
-    <section class="solstice-hero">
-      <div class="hero-badge">
-        <span class="lantern-icon">🏮</span> 25计算机1班 · 今夜限定暖冬夜话
-      </div>
-      <h1 class="hero-title">
-        冬至大如年 <span class="hero-dot">·</span> 人间小团圆
-      </h1>
-      <p class="hero-lead">
-        在一年中夜晚最长的一天，给 <strong>25计算机1班</strong> 敲代码的每一位同学，端上一碗热气腾腾的温暖。
-      </p>
-
-      <!-- 自毁倒计时仪式感卡片 -->
-      <div class="countdown-card" id="countdown-card">
-        <div class="countdown-header">
-          <span class="flame-dot"></span>
-          <span class="cd-title">⚠️【今夜限定】本专属页面仅在今夜存续，今晚24:00将自动从服务器自毁删除</span>
-        </div>
-        <div class="countdown-digits">
-          <div class="digit-box">
-            <span class="num" id="cd-hours">00</span>
-            <span class="lbl">时</span>
-          </div>
-          <span class="digit-colon">:</span>
-          <div class="digit-box">
-            <span class="num" id="cd-mins">00</span>
-            <span class="lbl">分</span>
-          </div>
-          <span class="digit-colon">:</span>
-          <div class="digit-box">
-            <span class="num" id="cd-secs">00</span>
-            <span class="lbl">秒</span>
-          </div>
-        </div>
-        <p class="countdown-note">过了今晚 24:00，所有的饺子、汤圆与祝福将化作星光彻底封存～</p>
-      </div>
-    </section>
-
-    <!-- 板块 1: 🥟 饺子派 vs 汤圆派 全班南北甜咸大决战 -->
-    <section class="solstice-card pk-section">
-      <div class="card-head-center">
-        <span class="section-tag">CENTURY BATTLE</span>
-        <h2>🥟 饺子派 VS 汤圆派 · 全班南北甜咸决战 🍡</h2>
-        <p>冬至大过年，你站哪一派？全班实时对决，每位同学投出神圣一票！</p>
+  <main class="riot-main-container">
+    <!-- ====================================================================
+         三、首页海报设计 (Hero Section)
+         Swiss Editorial / Contemporary Graphic Poster
+         ==================================================================== -->
+    <section class="riot-hero-section" id="hero">
+      <div class="hero-meta-strip">
+        <span>ISSUE NO. 2501 // CLASS OF 2025</span>
+        <span>25计算机1班 · WINTER SPECIAL ISSUE 2026</span>
+        <span>STATUS: <strong id="hero-status-pill">ONLINE (UNTIL MIDNIGHT)</strong></span>
       </div>
 
-      <div class="pk-arena-grid">
-        <!-- 饺子派 -->
-        <div class="pk-camp-card camp-dumpling" id="camp-dumpling-card">
-          <div class="camp-icon-large">🥟</div>
-          <h3 class="camp-title">北方饺子派</h3>
-          <p class="camp-slogan">“冬至不端饺子碗，冻掉耳朵没人管！蘸醋大蒜，人间正道！”</p>
-          <div class="camp-stat">
-            <span class="count" id="dumpling-vote-count">0</span> 票
+      <div class="hero-grid-poster">
+        <!-- 左侧排版海报核心 -->
+        <div class="hero-typo-column">
+          <div class="hero-issue-tag">
+            <span>冬至限定特辑</span> · <span>仅限今晚存续</span>
           </div>
-          <button type="button" class="button camp-vote-btn" id="vote-dumpling-btn">
-            🥟 投饺子一票
-          </button>
-        </div>
 
-        <!-- PK 中间进度条 -->
-        <div class="pk-divider">
-          <div class="vs-text">V S</div>
-          <div class="pk-progress-track">
-            <div class="pk-progress-fill-dumpling" id="pk-bar-dumpling" style="width: 50%;"></div>
-            <div class="pk-progress-fill-tangyuan" id="pk-bar-tangyuan" style="width: 50%;"></div>
+          <h1 class="hero-display-en">
+            <span class="en-line-1">WINTER</span>
+            <span class="en-line-2">IS OUR</span>
+            <span class="en-line-3">PLAYGROUND.</span>
+          </h1>
+
+          <div class="hero-display-cn">
+            这个冬天，<br>
+            <span>不按常规出牌。</span>
           </div>
-          <div class="pk-percent-row">
-            <span id="dumpling-percent-text">50%</span>
-            <span id="tangyuan-percent-text">50%</span>
+
+          <p class="hero-manifesto-text">
+            在一年中夜晚最长的一天，给 <strong>25计算机1班</strong> 敲代码的每一位同学，端上一碗热气腾腾的破格创意。不设限、不停歇，今夜是属于我们的数字试验场与冬日小团圆。
+          </p>
+
+          <!-- 倒计时与自毁告示（当代海报看板） -->
+          <div class="hero-countdown-ticker">
+            <div class="ticker-label-row">
+              <span>⚠️ SELF-DESTRUCTION SEQUENCE</span>
+              <span class="pulse-box">今晚 24:00 自动自毁</span>
+            </div>
+            <div class="ticker-clock-row">
+              <div class="clock-segment">
+                <span class="digit" id="cd-hours">00</span>
+                <span class="unit">HOURS</span>
+              </div>
+              <span class="clock-sep">:</span>
+              <div class="clock-segment">
+                <span class="digit" id="cd-mins">00</span>
+                <span class="unit">MINS</span>
+              </div>
+              <span class="clock-sep">:</span>
+              <div class="clock-segment">
+                <span class="digit" id="cd-secs">00</span>
+                <span class="unit">SECS</span>
+              </div>
+            </div>
+            <p class="ticker-warning-sub">
+              [ 距今夜落幕倒计时 ] 越过 2026-11-08 00:00:00 时，服务器将自动下线并彻底清除本专题。
+            </p>
           </div>
         </div>
 
-        <!-- 汤圆派 -->
-        <div class="pk-camp-card camp-tangyuan" id="camp-tangyuan-card">
-          <div class="camp-icon-large">🍡</div>
-          <h3 class="camp-title">南方汤圆派</h3>
-          <p class="camp-slogan">“吃过冬至圆，天天甜如蜜！黑芝麻花生流心，白白胖胖团团圆圆！”</p>
-          <div class="camp-stat">
-            <span class="count" id="tangyuan-vote-count">0</span> 票
-          </div>
-          <button type="button" class="button camp-vote-btn" id="vote-tangyuan-btn">
-            🍡 投汤圆一票
-          </button>
-        </div>
-      </div>
-      <p class="pk-my-status" id="pk-my-status">正在连接班级投票专线...</p>
-    </section>
-
-    <!-- 板块 2: 🍲 咕嘟咕嘟 · 捞热腾腾冬至专属幸运签 -->
-    <section class="solstice-card draw-section">
-      <div class="card-head-center">
-        <span class="section-tag">LUCKY TALISMAN</span>
-        <h2>🍲 咕嘟咕嘟 · 捞热腾腾冬至专属幸运签 🥢</h2>
-        <p>热气腾腾的大铜锅正在沸腾，伸出筷子捞一颗，测测你的期末与寒冬吉运！</p>
-      </div>
-
-      <div class="pot-stage-wrapper">
-        <div class="hot-pot-visual">
-          <div class="steam-stream s1"></div>
-          <div class="steam-stream s2"></div>
-          <div class="steam-stream s3"></div>
-          <div class="pot-body">
-            <div class="pot-soup">
-              <span class="floating-food f1">🥟</span>
-              <span class="floating-food f2">🍡</span>
-              <span class="floating-food f3">🥟</span>
-              <span class="floating-food f4">🍡</span>
-              <span class="floating-food f5">🥟</span>
+        <!-- 右侧海报插画与数据结构 -->
+        <div class="hero-visual-column">
+          <div class="poster-art-block">
+            <div class="poster-num-stamp">2501</div>
+            <div class="poster-inner-diagram">
+              <div class="winter-graphic-circle">
+                <span class="center-symbol">🥟</span>
+                <span class="graphic-ring-text">SOLSTICE RIOT</span>
+              </div>
+            </div>
+            <div class="poster-specs-list">
+              <span><strong>TARGET</strong>25计算机1班</span>
+              <span><strong>CHARACTERS</strong>14 位吉祥物全档案</span>
+              <span><strong>ARENA</strong>饺子 VS 汤圆俱乐部</span>
+              <span><strong>STORAGE</strong>真实数据实时同步</span>
             </div>
           </div>
-        </div>
 
-        <button type="button" class="button draw-action-btn" id="draw-lucky-btn">
-          🥢 下筷子！捞一颗热腾腾的幸运签
-        </button>
-      </div>
-
-      <!-- 幸运签弹窗卡片 (初始隐藏) -->
-      <div class="talisman-overlay" id="talisman-overlay" style="display: none;">
-        <div class="talisman-card" id="talisman-card">
-          <button type="button" class="talisman-close-btn" id="talisman-close-btn" aria-label="关闭">&times;</button>
-          <div class="talisman-seal">🏮 25计1限定</div>
-          <div class="talisman-icon" id="t-icon">🥟</div>
-          <h3 class="talisman-name" id="t-name">韭菜鸡蛋水饺 · 编译零Bug符</h3>
-          <p class="talisman-mascot-blessing" id="t-mascot">吉祥物寄语：鞋子给你垫上暖宝宝，谁踩我都不怕冷！</p>
-          <div class="talisman-quote-box">
-            <span class="t-quote-mark">“</span>
-            <span id="t-text">代码编译一次过，高数90+，Bug全部绕着走！</span>
-            <span class="t-quote-mark">”</span>
-          </div>
-          <div class="talisman-meta-row">
-            <span>幸运指数：<strong id="t-stars">★★★★★</strong></span>
-            <span>幸运代码：<code id="t-code">exit(0)</code></span>
-          </div>
-          <div class="talisman-actions">
-            <button type="button" class="button secondary" id="talisman-copy-btn">📋 复制发班级群</button>
-            <button type="button" class="button" id="talisman-again-btn">🥢 再捞一个</button>
-          </div>
+          <a href="#arena" class="hero-scroll-cue">
+            <span>SCROLL TO ENTER THE ARENA</span> <span>↓</span>
+          </a>
         </div>
       </div>
     </section>
 
-    <!-- 板块 3: 🐾 班级 14 大吉祥物冬至送暖联欢会 -->
-    <section class="solstice-card mascots-section">
-      <div class="card-head-center">
-        <span class="section-tag">CLASS MASCOTS</span>
-        <h2>🐾 班级 14 大吉祥物 · 冬至送暖联欢会 🧣</h2>
-        <p>吉祥物们全员穿上防冻冬装，点击任何一个，听听他们送给全班的冬至悄悄话！</p>
+    <!-- ====================================================================
+         四、饺子 VS 汤圆互动升级 (DUMPLING CLUB vs TANGYUAN CLUB)
+         ==================================================================== -->
+    <section class="riot-section" id="arena">
+      <div class="section-editorial-head">
+        <div class="sec-title-wrap">
+          <span class="sec-index-tag">01 // THE CENTURY CLASH</span>
+          <h2 class="sec-main-title">DUMPLING CLUB VS TANGYUAN CLUB</h2>
+        </div>
+        <p class="sec-sub-desc">
+          北方水饺 VS 南方汤圆，两个阵营各执一词。全班真实一人一票对决，拒绝虚假同步。
+        </p>
       </div>
 
-      <div class="mascots-festive-grid" id="mascots-festive-grid">
-        <!-- 由 JS 渲染 14 个换装吉祥物卡片 -->
-      </div>
+      <div class="battle-arena-container">
+        <div class="clubs-grid-layout">
+          <!-- 饺子俱乐部 -->
+          <article class="club-box dumpling-side" id="club-dumpling-card">
+            <div class="club-card-top">
+              <span class="club-code-tag">CLUB NO.01</span>
+              <span class="club-icon-graphic">🥟</span>
+            </div>
+            <div>
+              <h3 class="club-brand-name">DUMPLING CLUB</h3>
+              <div class="club-cn-alias">北方水饺派 · 蘸醋大蒜正统</div>
+              <p class="club-manifesto">
+                “冬至不端饺子碗，冻掉耳朵没人管！皮薄馅大热气腾腾，每一口都是真金白银的碳水力量。”
+              </p>
+            </div>
+            <div>
+              <div class="club-stats-row">
+                <span class="tally-label">CURRENT VOTES</span>
+                <span class="tally-number" id="dumpling-vote-count">0</span>
+              </div>
+              <button type="button" class="club-vote-trigger" id="vote-dumpling-btn">
+                <span>VOTE DUMPLING</span> <span>🥟</span>
+              </button>
+            </div>
+          </article>
 
-      <!-- 吉祥物对白气泡浮窗 -->
-      <div class="mascot-dialog-toast" id="mascot-dialog-toast" style="display: none;">
-        <span class="dialog-avatar" id="toast-avatar">👟</span>
-        <div class="dialog-body">
-          <strong id="toast-name">鞋子</strong>
-          <p id="toast-text">天冷了，今天不打架，本鞋送大家温暖！</p>
+          <!-- 汤圆俱乐部 -->
+          <article class="club-box tangyuan-side" id="club-tangyuan-card">
+            <div class="club-card-top">
+              <span class="club-code-tag">CLUB NO.02</span>
+              <span class="club-icon-graphic">🍡</span>
+            </div>
+            <div>
+              <h3 class="club-brand-name">TANGYUAN CLUB</h3>
+              <div class="club-cn-alias">南方汤圆派 · 芝麻流心甜美</div>
+              <p class="club-manifesto">
+                “吃过冬至圆，天天甜如蜜！白白胖胖滚烫爆浆，团圆天下第一，甜品是抚平焦虑的最高解药。”
+              </p>
+            </div>
+            <div>
+              <div class="club-stats-row">
+                <span class="tally-label">CURRENT VOTES</span>
+                <span class="tally-number" id="tangyuan-vote-count">0</span>
+              </div>
+              <button type="button" class="club-vote-trigger" id="vote-tangyuan-btn">
+                <span>VOTE TANGYUAN</span> <span>🍡</span>
+              </button>
+            </div>
+          </article>
+        </div>
+
+        <!-- 双方对决计量看板 -->
+        <div class="battle-metrics-strip">
+          <div class="metrics-status-bar">
+            <span>REALTIME RATIO</span>
+            <span id="metrics-lead-badge">BATTLE IN PROGRESS</span>
+            <span>TOTAL CASTED: <strong id="total-vote-tally">0</strong></span>
+          </div>
+          <div class="ratio-progress-rail">
+            <div class="ratio-fill-dumpling" id="pk-bar-dumpling" style="width: 50%;"></div>
+            <div class="ratio-fill-tangyuan" id="pk-bar-tangyuan" style="width: 50%;"></div>
+          </div>
+          <div class="ratio-numbers-footer">
+            <span class="d-pct">DUMPLINGS: <span id="dumpling-percent-text">50%</span></span>
+            <span class="t-pct">TANGYUAN: <span id="tangyuan-percent-text">50%</span></span>
+          </div>
+          <p class="battle-notice-msg" id="pk-my-status">正在连接班级投票专线...</p>
         </div>
       </div>
     </section>
 
-    <!-- 板块 4: 🏮 星空孔明灯 · 暖冬愿望墙 -->
-    <section class="solstice-card wish-section">
-      <div class="card-head-center">
-        <span class="section-tag">WISH LANTERNS</span>
-        <h2>🏮 星空孔明灯 · 25计1暖冬愿望墙 ✨</h2>
-        <p>写下一句给班级、同学或自己的暖心祝愿，放飞孔明灯照亮冬夜！</p>
+    <!-- ====================================================================
+         五、14个班级吉祥物图鉴 (CLASS 25 CHARACTER ARCHIVE)
+         ==================================================================== -->
+    <section class="riot-section" id="archive">
+      <div class="section-editorial-head">
+        <div class="sec-title-wrap">
+          <span class="sec-index-tag">02 // MASCOT DOSSIER</span>
+          <h2 class="sec-main-title">CLASS 25 CHARACTER ARCHIVE</h2>
+        </div>
+        <p class="sec-sub-desc">
+          保留全部 14 位班级官方吉祥物及其核心技能与真实资料。点击任意卡片调阅详尽人物机密档案。
+        </p>
       </div>
 
-      <!-- 许愿表单 -->
-      <form class="wish-form" id="wish-form">
-        <div class="wish-input-row">
-          <input type="text" id="wish-name-input" maxlength="16" placeholder="你的昵称 (默认热心同学)" autocomplete="off">
-          <input type="text" id="wish-text-input" maxlength="100" placeholder="写下一句冬至暖心愿望 (1~100字)..." required autocomplete="off">
-          <button type="submit" class="button wish-submit-btn" id="wish-submit-btn">
-            🏮 放飞孔明灯
+      <div class="archive-controls-bar">
+        <span>ARCHIVED ENTITIES: 14 / 14</span>
+        <span class="archive-count-tag">[ CLICK CARD FOR FULL DOSSIER ]</span>
+      </div>
+
+      <div class="mascot-archive-grid" id="mascot-archive-grid">
+        <!-- 14 个吉祥物卡片由 JS 根据真实资料动态渲染 -->
+      </div>
+    </section>
+
+    <!-- 吉祥物专属档案模态卡片 (Dossier Drawer / Modal) -->
+    <div class="dossier-modal-overlay" id="dossier-modal-overlay">
+      <div class="dossier-modal-card" id="dossier-modal-card">
+        <div class="dossier-header-bar">
+          <span>CLASSIFIED DOSSIER // <strong id="dossier-id-tag">#01</strong></span>
+          <button type="button" class="dossier-close-trigger" id="dossier-close-btn" aria-label="关闭档案">&times;</button>
+        </div>
+        <div class="dossier-body-content">
+          <div class="dossier-hero-row">
+            <div class="dossier-avatar-large" id="dossier-avatar-container">
+              <!-- 图片或大 Emoji -->
+            </div>
+            <div class="dossier-title-col">
+              <h3 id="dossier-name-text">鞋子</h3>
+              <div class="dossier-badge-row">
+                <span class="d-badge trait" id="dossier-trait-text">狂暴跑者</span>
+                <span class="d-badge skill" id="dossier-skill-text">黄金切尔西破颜踢</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dossier-quote-box" id="dossier-quote-text">
+            “英雄可以受委屈，但不能踩我的切尔西！今天冬至不踢人，送大家纯棉暖宝宝！”
+          </div>
+
+          <div class="dossier-meta-details">
+            <div class="meta-field">
+              <label>PERSONALITY &amp; LORE / 性格与档案</label>
+              <p id="dossier-lore-text">步履不停，踏碎一切困难。在班级里守护每一位早八赶课的同学。</p>
+            </div>
+            <div class="meta-field">
+              <label>ATTACK SKILL SPEC / 奥义数据</label>
+              <p id="dossier-damage-text">Lv.4 造成 35 点破颜暴击伤害，每升一级伤害递增。</p>
+            </div>
+          </div>
+
+          <div class="dossier-footer-nav">
+            <button type="button" class="dossier-nav-btn" id="dossier-prev-btn">← PREV</button>
+            <button type="button" class="dossier-secret-btn" id="dossier-secret-btn">TRIGGER ACTION ⚡</button>
+            <button type="button" class="dossier-nav-btn" id="dossier-next-btn">NEXT →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         六、幸运签功能升级 (WINTER FORTUNE MACHINE)
+         ==================================================================== -->
+    <section class="riot-section" id="fortune">
+      <div class="section-editorial-head">
+        <div class="sec-title-wrap">
+          <span class="sec-index-tag">03 // TICKET DISPENSER</span>
+          <h2 class="sec-main-title">WINTER FORTUNE MACHINE</h2>
+        </div>
+        <p class="sec-sub-desc">
+          代码零Bug、期末免挂、早八有位还是发量守护？现代抽签机出票，摒弃陈词滥调。
+        </p>
+      </div>
+
+      <div class="fortune-machine-deck">
+        <div class="machine-console-col">
+          <div class="console-status-pill">
+            <span class="dot"></span> <span>TERMINAL READY // 抽签机就绪</span>
+          </div>
+          <h3 class="console-title">
+            摇出你的 25 计 1<br>冬日专属签文。
+          </h3>
+          <p class="console-instructions">
+            纯粹基于 25 计算机 1 班的日常生活与代码幽默。点击机台扳机，撕下一张专属你的实体质感冬至凭证。
+          </p>
+          <button type="button" class="machine-trigger-btn" id="machine-trigger-btn">
+            <span>DISPENSE FORTUNE</span> <span>⚡</span>
           </button>
         </div>
-      </form>
 
-      <!-- 愿望星空卡片流 -->
-      <div class="wishes-wall-grid" id="wishes-wall-grid">
-        <div class="wish-loading-hint">正在唤醒星空愿望墙...</div>
+        <div class="machine-dispenser-window">
+          <!-- 签文实体凭证卡 -->
+          <article class="fortune-ticket-card" id="fortune-ticket-card">
+            <div class="ticket-notch-left"></div>
+            <div class="ticket-notch-right"></div>
+
+            <div class="ticket-top-tag">
+              <span>CLASS 2501 // OFFICIAL SLIP</span>
+              <span id="ticket-serial-id">NO. 8848-A</span>
+            </div>
+
+            <h4 class="ticket-talisman-name" id="ticket-name-text">
+              韭菜鸡蛋水饺 · 编译零Bug符
+            </h4>
+
+            <div class="ticket-quote-main" id="ticket-quote-text">
+              “代码编译一次通过，高数90+，期末大作业答辩全场鼓掌！”
+            </div>
+
+            <div class="ticket-meta-block">
+              <span>MASCOT BLESSING: <strong id="ticket-mascot-author">鞋子</strong></span>
+              <span>LUCKY CODE: <code id="ticket-code-tag">exit(0)</code></span>
+            </div>
+
+            <div class="ticket-actions-bar">
+              <button type="button" class="ticket-btn-sm" id="ticket-redraw-btn">RE-DRAW ↺</button>
+              <button type="button" class="ticket-btn-sm copy-btn" id="ticket-copy-btn">COPY &amp; SHARE 📋</button>
+            </div>
+          </article>
+        </div>
       </div>
     </section>
 
-    <!-- 底部温馨版权与自毁声明 -->
-    <footer class="solstice-footer">
-      <p class="footer-p1">25计算机1班 · 冬至专属限定特辑 🥟</p>
-      <p class="footer-p2">“冬至大如年，人间小团圆。今夜有火，有光，有彼此。”</p>
-      <p class="footer-expire-note">
-        ⌛ 服务器自毁守护进程运行中 · 今晚24:00一过本页面将自动下线并物理删除
-      </p>
+    <!-- ====================================================================
+         七、星空愿望墙升级 (THE WISH WALL)
+         ==================================================================== -->
+    <section class="riot-section" id="wishes">
+      <div class="section-editorial-head">
+        <div class="sec-title-wrap">
+          <span class="sec-index-tag">04 // COMMUNITY ECHO</span>
+          <h2 class="sec-main-title">THE WISH WALL</h2>
+        </div>
+        <p class="sec-sub-desc">
+          彩色便签，真诚留声。写下对班级、同窗或自己的期许，真实保存于服务器。
+        </p>
+      </div>
+
+      <!-- 撰写便签表单 -->
+      <div class="wish-composer-box">
+        <div class="composer-head-row">
+          <span>COMPOSE A NEW NOTE // 发布新愿望便签</span>
+          <span>MAX 100 CHARS</span>
+        </div>
+        <form id="wish-submit-form" class="wish-input-form-grid">
+          <input type="text" id="wish-author-field" class="wish-text-field" maxlength="16" placeholder="你的署名 (默认热心同学)" autocomplete="off">
+          <input type="text" id="wish-content-field" class="wish-text-field" maxlength="100" placeholder="写下一句冬至暖心愿望或吐槽..." required autocomplete="off">
+          <button type="submit" class="wish-submit-trigger" id="wish-submit-btn">PIN IT // 上墙 📌</button>
+        </form>
+      </div>
+
+      <!-- 便签展示墙 -->
+      <div class="wishes-pinboard-grid" id="wishes-pinboard-grid">
+        <!-- 由 JS 渲染便签卡片 -->
+      </div>
+    </section>
+
+    <!-- 底部版权与声明 -->
+    <footer class="riot-footer">
+      <div class="footer-manifesto-stamp">
+        <span class="footer-stamp-box">2501 // RIOT</span>
+        <span>25计算机1班 · 冬至专属夜话 2026</span>
+      </div>
+      <div class="footer-disclaimer-note">
+        ⌛ 服务器守护进程运行中 · 今晚 24:00 (2026-11-08 00:00:00) 自动自毁物理下线
+      </div>
     </footer>
   </main>
 
-  <!-- 全屏自毁结束全屏遮罩 (到期自动触发) -->
-  <div class="self-destruct-curtain" id="self-destruct-curtain" style="display: none;">
-    <div class="destruct-content">
-      <div class="destruct-orb">🌌</div>
+  <!-- 全屏自毁遮罩 (今夜过后触发) -->
+  <div class="destruct-fullscreen-modal" id="destruct-fullscreen-modal">
+    <div class="destruct-card-inner">
       <h2>今夜已逝 · 冬至圆满落幕</h2>
-      <p class="destruct-sub">2026-11-08 00:00:00 · 晨光已至</p>
-      <div class="destruct-desc">
-        本页面已按冬至限定约定，从服务器自动执行自毁删除程序。<br>
-        感谢 <strong>25计算机1班</strong> 每一位同学的温暖相伴！<br>
-        愿大家这个冬天代码无Bug，身体倍儿棒，期末稳过！
-      </div>
-      <a href="/" class="button destruct-back-btn">返回班级主页 ➔</a>
+      <span class="time-code">TIME: 2026-11-08 00:00:00 // CUTOFF REACHED</span>
+      <p>
+        冬至专属网页已按照约定触发自毁删除程序，相关专属路由已从服务器永久清除。<br>
+        感谢 <strong>25计算机1班</strong> 全体同学的陪伴，愿大家冬日安康，温暖如初！
+      </p>
+      <a href="/" class="destruct-exit-btn">RETURN HOME // 返回主页 ➔</a>
     </div>
   </div>
 
-  <script src="dongzhi.js?v=1.0.0"></script>
+  <script src="dongzhi.js?v=2.0.0"></script>
 </body>
 </html>

@@ -55,7 +55,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         }
         // Only serve explicit public files, never the database or server source.
         const isAllowedAsset = /^assets\/(p[123]\.jpg|rednose-classmate\.svg|class-film\.mp4|liubang-\d(-full)?\.jpg)$/.test(relative);
-        const allowedPages = ['index.html','admin.html','dongzhi.html','dongzhi.css','dongzhi.js','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','chicken-battle.css','chicken-battle.js','meme-lab.css','meme-lab.js','fun.js','app.js','style.css'];
+        const allowedPages = ['index.html','admin.html','dongzhi.html','dongzhi.css','dongzhi.js','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','chicken-battle.css','chicken-battle.js','meme-lab.css','meme-lab.js','site-polish.css','site-polish.js','fun.js','app.js','style.css'];
         allowedPages.push('2e3e59b8e9a904ddb6936dec7a10a6d3.txt');
         if (!isAllowedAsset && !allowedPages.includes(relative)) return send(404,{error:'页面不存在'});
         let content;
@@ -79,7 +79,8 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
           }
           res.writeHead(200,{...headers,'Content-Length':content.length});return res.end(req.method==='HEAD'?undefined:content);
         }
-        res.writeHead(200, {'Content-Type':type,'Cache-Control':'no-cache'});
+        const cacheControl = relative.endsWith('.txt') ? 'no-cache' : url.searchParams.has('v') ? 'public, max-age=31536000, immutable' : isAllowedAsset ? 'public, max-age=3600' : 'no-cache';
+        res.writeHead(200, {'Content-Type':type,'Cache-Control':cacheControl});
         return res.end(req.method === 'HEAD' ? undefined : content);
       }
       res.setHeader('Cache-Control','no-store');

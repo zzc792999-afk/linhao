@@ -31,6 +31,8 @@ test('cross-device sharing, ownership, validation, static isolation and restart 
     await b('/api/likes/p2','PUT',{liked:true});assert.equal((await a('/api/state')).data.likes.p2.count,2);
     for(const route of ['/server.js','/data/class.db','/package.json','/.git/config','/%2e%2e/server.js'])assert.equal((await fetch(base+route)).status,404);
     for(const route of ['/','/style.css','/app.js','/assets/p1.jpg','/assets/p2.jpg','/assets/p3.jpg'])assert.equal((await fetch(base+route)).status,200);
+    const polish=await fetch(base+'/site-polish.js?v=4.5.0');assert.equal(polish.status,200);assert.match(polish.headers.get('cache-control'),/immutable/);assert.match(await polish.text(),/搜索网站功能/);
+    const verification=await fetch(base+'/2e3e59b8e9a904ddb6936dec7a10a6d3.txt');assert.equal(verification.status,200);assert.equal(verification.headers.get('cache-control'),'no-cache');
     const film=await fetch(base+'/assets/class-film.mp4');assert.equal(film.status,200);assert.equal(film.headers.get('content-type'),'video/mp4');const filmBytes=Buffer.from(await film.arrayBuffer());
     const partial=await fetch(base+'/assets/class-film.mp4',{headers:{Range:'bytes=0-31'}});assert.equal(partial.status,206);assert.deepEqual(Buffer.from(await partial.arrayBuffer()),filmBytes.subarray(0,32));assert.equal(partial.headers.get('content-range'),`bytes 0-31/${filmBytes.length}`);
     const suffix=await fetch(base+'/assets/class-film.mp4',{headers:{Range:'bytes=-16'}});assert.equal(suffix.status,206);assert.deepEqual(Buffer.from(await suffix.arrayBuffer()),filmBytes.subarray(-16));

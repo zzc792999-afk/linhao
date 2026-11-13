@@ -2,6 +2,25 @@
    鸡的特战特效 + 战斗系统 CSS
    ========================================================================== */
 
+.wandering-hen, .hen-egg {
+  position: fixed; bottom: max(82px, calc(env(safe-area-inset-bottom) + 76px));
+  z-index: 900; width: 60px; height: 60px; padding: 0; border: 0;
+  background: transparent; cursor: pointer; font-size: 44px; line-height: 1;
+  touch-action: manipulation; filter: drop-shadow(0 4px 3px #0002);
+}
+.hen-egg { width: 44px; height: 48px; font-size: 32px; z-index: 899; }
+.hen-egg.hatched { color: #ad895b; font-size: 25px; cursor: default; }
+.wandering-hen:focus-visible, .hen-egg:focus-visible { outline: 3px solid #e5a52c; border-radius: 18px; }
+.hen-notice {
+  position: fixed; left: 50%; bottom: 160px; z-index: 1100;
+  transform: translateX(-50%) translateY(12px); opacity: 0; pointer-events: none;
+  padding: 12px 28px; border: 2px solid #e6c58b; border-radius: 24px;
+  background: #fff8e9; color: #684422; font-size: 26px; font-weight: 800;
+  box-shadow: 0 8px 24px #0002; transition: opacity .18s, transform .18s;
+}
+.hen-notice.visible { opacity: 1; transform: translateX(-50%); }
+@media (prefers-reduced-motion: reduce) { .hen-notice { transition: none; } }
+
 /* 鸡 Lv3 彩虹光晕 */
 .arcade-pet-card[data-arcade-pet="chicken"].chicken-ultimate {
   border: 2px solid #ffd700!important;

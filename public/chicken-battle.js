@@ -1,4 +1,75 @@
 'use strict';
+// A small, local-only screen companion; eggs never write to the database.
+(() => {
+  const start = () => {
+    if (document.getElementById('wandering-hen')) return;
+    const hen = document.createElement('button');
+    hen.id = 'wandering-hen';
+    hen.type = 'button';
+    hen.className = 'wandering-hen';
+    hen.textContent = '🐔';
+    hen.setAttribute('aria-label', '点击小鸡下蛋');
+    hen.title = '点我下蛋，再点蛋看看！';
+    const notice = document.createElement('div');
+    notice.className = 'hen-notice';
+    notice.setAttribute('role', 'status');
+    document.body.append(hen, notice);
+    const eggs = new Set();
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    let x = 24, direction = 1, last = 0, pausedUntil = 0, laidAt = 0, noticeTimer;
+    const edge = () => Math.max(0, innerWidth - 66);
+    const place = () => {
+      x = Math.max(0, Math.min(edge(), x));
+      hen.style.left = `${x}px`;
+    };
+    hen.addEventListener('click', () => {
+      const now = performance.now();
+      if (now - laidAt < 450) return;
+      laidAt = now;
+      pausedUntil = now + 900;
+      if (eggs.size >= 6) { const oldest = eggs.values().next().value; oldest.remove(); eggs.delete(oldest); }
+      const egg = document.createElement('button');
+      egg.type = 'button';
+      egg.className = 'hen-egg';
+      egg.textContent = '🥚';
+      egg.style.left = `${Math.min(x + 8, Math.max(0, innerWidth - 48))}px`;
+      egg.setAttribute('aria-label', '打开小鸡下的蛋');
+      document.body.append(egg);
+      eggs.add(egg);
+      const expiry = setTimeout(() => { egg.remove(); eggs.delete(egg); }, 20000);
+      egg.addEventListener('click', () => {
+        clearTimeout(expiry);
+        egg.disabled = true;
+        egg.classList.add('hatched');
+        egg.textContent = '◡ ◡';
+        egg.setAttribute('aria-label', '空蛋壳');
+        notice.textContent = '滚木';
+        notice.classList.add('visible');
+        clearTimeout(noticeTimer);
+        noticeTimer = setTimeout(() => notice.classList.remove('visible'), 1800);
+        setTimeout(() => { egg.remove(); eggs.delete(egg); }, 1600);
+      }, { once: true });
+    });
+    hen.addEventListener('mouseenter', () => { pausedUntil = performance.now() + 1500; });
+    addEventListener('resize', () => { place(); for (const egg of eggs) egg.style.left = `${Math.min(parseFloat(egg.style.left), Math.max(0, innerWidth - 48))}px`; });
+    const walk = now => {
+      const dt = last ? Math.min((now - last) / 1000, .05) : 0;
+      last = now;
+      if (!reduced.matches && now > pausedUntil && document.activeElement !== hen) {
+        x += direction * dt * 36;
+        if (x >= edge()) direction = -1;
+        if (x <= 0) direction = 1;
+        place();
+        hen.style.transform = `scaleX(${direction}) rotate(${Math.sin(now / 130) * 5}deg)`;
+      }
+      requestAnimationFrame(walk);
+    };
+    place();
+    requestAnimationFrame(walk);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
+})();
 (() => {
   const $ = s => document.querySelector(s);
   const el = (tag, text, cls) => {

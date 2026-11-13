@@ -8,6 +8,16 @@
   background: transparent; cursor: pointer; font-size: 44px; line-height: 1;
   touch-action: manipulation; filter: drop-shadow(0 4px 3px #0002);
 }
+.wandering-hen { width: 100px; height: 120px; transform-origin: 50% 90%; }
+.weird-hen-art { display: block; width: 100%; height: 100%; overflow: visible; }
+.hen-leg-a, .hen-leg-b { transform-box: fill-box; transform-origin: top center; animation: hen-strut .32s ease-in-out infinite alternate; }
+.hen-leg-b { animation-delay: -.32s; }
+.hen-wobble { transform-origin: 60px 105px; animation: hen-neck .64s ease-in-out infinite alternate; }
+.hen-laying .weird-hen-art { animation: hen-squat .6s ease-in-out; transform-origin: bottom; }
+@keyframes hen-strut { from { transform: rotate(-22deg); } to { transform: rotate(24deg); } }
+@keyframes hen-neck { from { transform: skewX(-4deg); } to { transform: skewX(5deg); } }
+@keyframes hen-squat { 35% { transform: scale(1.25, .65); } 65% { transform: scale(.85, 1.12); } }
+@media (prefers-reduced-motion: reduce) { .wandering-hen * { animation: none !important; } }
 .hen-egg { width: 44px; height: 48px; font-size: 32px; z-index: 899; }
 .hen-egg.hatched { color: #ad895b; font-size: 25px; cursor: default; }
 .wandering-hen:focus-visible, .hen-egg:focus-visible { outline: 3px solid #e5a52c; border-radius: 18px; }

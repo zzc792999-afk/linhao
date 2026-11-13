@@ -7,7 +7,23 @@
     hen.id = 'wandering-hen';
     hen.type = 'button';
     hen.className = 'wandering-hen';
-    hen.textContent = '🐔';
+    hen.innerHTML = `<svg class="weird-hen-art" viewBox="0 0 120 140" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="#29221c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path class="hen-leg-a" d="M48 103l-8 23-14 3m14-3 10 7" fill="none"/>
+        <path class="hen-leg-b" d="M68 104l9 22 17-2m-17 2-5 9" fill="none"/>
+        <g class="hen-wobble">
+          <path d="M31 73 9 52l5 27L5 76l22 23" fill="#e76a48"/>
+          <path d="M27 79Q12 112 55 113Q88 113 85 87L80 48 94 41 87 28 67 32 61 78Q43 68 27 79Z" fill="#fff4d3"/>
+          <path d="M39 83q-16 14 9 16l10-11" fill="#e7ce8b"/>
+          <path d="m69 31-9-14q-2-9 8-5l7 10-1-16q6-8 10 2l1 13 7-10q11-3 8 7l-12 15" fill="#ef4f50"/>
+          <path d="m89 44 24 10-24 5Z" fill="#ffb735"/>
+          <path d="M86 59q12 16 0 16-10-3-6-15" fill="#ef4f50"/>
+          <ellipse cx="72" cy="42" rx="10" ry="12" fill="white"/>
+          <ellipse cx="88" cy="39" rx="8" ry="9" fill="white"/>
+          <path d="m70 43 1 4m19-12 1 3" stroke-width="5"/>
+          <path d="m65 64 8 2m-9 5 6 2" stroke="#c8ad79" stroke-width="2"/>
+        </g>
+      </g></svg>`;
     hen.setAttribute('aria-label', '点击小鸡下蛋');
     hen.title = '点我下蛋，再点蛋看看！';
     const notice = document.createElement('div');
@@ -17,7 +33,7 @@
     const eggs = new Set();
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     let x = 24, direction = 1, last = 0, pausedUntil = 0, laidAt = 0, noticeTimer;
-    const edge = () => Math.max(0, innerWidth - 66);
+    const edge = () => Math.max(0, innerWidth - 104);
     const place = () => {
       x = Math.max(0, Math.min(edge(), x));
       hen.style.left = `${x}px`;
@@ -27,6 +43,10 @@
       if (now - laidAt < 450) return;
       laidAt = now;
       pausedUntil = now + 900;
+      hen.classList.remove('hen-laying');
+      void hen.offsetWidth;
+      hen.classList.add('hen-laying');
+      setTimeout(() => hen.classList.remove('hen-laying'), 650);
       if (eggs.size >= 6) { const oldest = eggs.values().next().value; oldest.remove(); eggs.delete(oldest); }
       const egg = document.createElement('button');
       egg.type = 'button';
@@ -60,7 +80,7 @@
         if (x >= edge()) direction = -1;
         if (x <= 0) direction = 1;
         place();
-        hen.style.transform = `scaleX(${direction}) rotate(${Math.sin(now / 130) * 5}deg)`;
+        hen.style.transform = `scaleX(${direction}) translateY(${-Math.abs(Math.sin(now / 130)) * 5}px) rotate(${Math.sin(now / 130) * 7}deg)`;
       }
       requestAnimationFrame(walk);
     };

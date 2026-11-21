@@ -14,6 +14,30 @@ export const mascots=[
     ]
   },
   {
+    id:'wuliangye',baseName:'五粮液',name:'五粮液',emoji:'🏺',
+    attackSkill:{name:'五谷转圈圈',icon:'🏺',baseDamage:25,damage:25,desc:'红盖一拧，福气到班。'},
+    forms:[
+      {name:'五粮液',emoji:'🏺',motto:'红盖一拧，福气到班。'},
+      {name:'红盖瓶仔',emoji:'🏺',motto:'今天也收到同学们的投喂。'},
+      {name:'五谷锦瓶',emoji:'🏺',motto:'一步一步，继续长大。'},
+      {name:'金穗福瓶',emoji:'🏺',motto:'新等级解锁啦！'},
+      {name:'五谷守护',emoji:'🏺',motto:'班级小伙伴，随时来打招呼。'},
+      {name:'五谷福星',emoji:'🏺',motto:'已收集全部成长阶段。'}
+    ]
+  },
+  {
+    id:'penguin',baseName:'凑企鹅',name:'凑企鹅',emoji:'🐧',
+    attackSkill:{name:'企鹅滑步',icon:'🐧',baseDamage:25,damage:25,desc:'扭着走，凑到你旁边。'},
+    forms:[
+      {name:'凑企鹅',emoji:'🐧',motto:'扭着走，凑到你旁边。'},
+      {name:'围巾企鹅',emoji:'🐧',motto:'今天也收到同学们的投喂。'},
+      {name:'滑步企鹅',emoji:'🐧',motto:'一步一步，继续长大。'},
+      {name:'雪球企鹅',emoji:'🐧',motto:'新等级解锁啦！'},
+      {name:'极地搭子',emoji:'🐧',motto:'班级小伙伴，随时来打招呼。'},
+      {name:'冰原队长',emoji:'🐧',motto:'已收集全部成长阶段。'}
+    ]
+  },
+  {
     id:'turtle',baseName:'甲鱼',name:'甲鱼',emoji:'🐢',
     attackSkill:{name:'玄武金刚螺旋',icon:'🥷',damage:30,desc:'缩入金刚硬壳高速螺旋撞击，造成30点穿甲伤害！'},
     forms:[
@@ -316,7 +340,9 @@ export function arcadeStore(query){
           baseName:m.baseName,
           name:currentForm.name,
           emoji:currentForm.emoji,
-          image:currentForm.image||m.image,
+          image:m.id==='liubang'
+            ? (currentForm.image||m.image).replace('/assets/','/assets/mascots-v1/').replace('.jpg','.svg')
+            : '/assets/mascots-v1/'+m.id+'.svg',
           motto:currentForm.motto,
           feeds,
           rawFeeds,

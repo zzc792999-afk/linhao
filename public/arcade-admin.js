@@ -26,7 +26,9 @@
   { id: 'toe', name: '脚趾头', icon: '🦶', skill: '【抠出三室一厅】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
   { id: 'arowana', name: '龙鱼', icon: '🐠', skill: '【金龙摆尾翻江浪】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
   { id: 'squirtle', name: '杰尼龟', icon: '🐢', skill: '【水炮墨镜铁头功】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
-  { id: 'buckteeth', name: '兔子牙', icon: '🦷', skill: '【暴风超能大门牙】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' }
+  { id: 'buckteeth', name: '兔子牙', icon: '🦷', skill: '【暴风超能大门牙】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'wuliangye', name: '五粮液', skill: '【五谷转圈圈】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' },
+  { id: 'penguin', name: '凑企鹅', skill: '【企鹅滑步】Lv.4 解锁 25 点体力伤害（每升一级加成 +10）' }
  ];
 
  async function api(path='',method='GET',body){
@@ -88,7 +90,16 @@
    container.replaceChildren(...MASCOTS.map(m=>{
     const card=el('div',undefined,'mascot-admin-card');
     const head=el('div',undefined,'mascot-admin-card-head');
-    head.append(el('span',`${m.icon} ${m.name}`),el('span',m.id,'small-note'));
+    const label = el('span');
+    const icon = el('img');
+    icon.src = '/assets/mascots-v1/' + (m.id === 'liubang' ? 'liubang-1' : m.id) + '.svg';
+    icon.alt = '';
+    icon.width = 28;
+    icon.height = 28;
+    icon.loading = 'lazy';
+    icon.style.verticalAlign = 'middle';
+    label.append(icon, ' ' + m.name);
+    head.append(label,el('span',m.id,'small-note'));
     const skill=el('div',m.skill,'mascot-admin-card-skill');
     const action=el('div',undefined,'mascot-admin-card-action');
     const input=el('input');
@@ -113,7 +124,7 @@
     card.append(head,skill,action);
     return card;
    }));
-   mascotNotice('已同步 21 位吉祥物攻击授权密码。修改后点击保存即可生效。');
+   mascotNotice('已同步 '+MASCOTS.length+' 位吉祥物攻击授权密码。修改后点击保存即可生效。');
   }catch(e){
    mascotNotice(e.message);
   }
@@ -129,7 +140,7 @@
     currentPasswords[id]=inp.value.trim()||'2501';
    });
    await api('/mascot-passwords','PUT',{passwords:currentPasswords});
-   mascotNotice('已成功保存所有 21 位吉祥物的攻击授权密码！');
+   mascotNotice('已成功保存所有 '+MASCOTS.length+' 位吉祥物的攻击授权密码！');
   }catch(e){
    mascotNotice(e.message);
   }finally{

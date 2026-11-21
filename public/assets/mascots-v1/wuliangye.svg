@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 100">
+  <ellipse cx="56" cy="92" rx="29" ry="3" fill="#82715a" opacity=".23"/>
+  <g stroke="#392f28" stroke-width="2.7" stroke-linejoin="round" stroke-linecap="round" fill="#ede4ca">
+    <path d="M46 31V15h24v16l13 19v34q0 6-6 6H39q-6 0-6-6V50Z"/><path d="M45 12h26v14H45z" fill="#bb5149"/><path d="M34 57h48v23H34z" fill="#a84440"/><path d="M49 50q9-10 18 0" fill="none"/><text x="58" y="72" text-anchor="middle" fill="#fff3cc" stroke="none" font-size="12" font-weight="700" font-family="Microsoft YaHei, sans-serif">五粮液</text>
+  </g>
+</svg>

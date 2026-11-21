@@ -68,7 +68,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
         const type = {'.txt':'text/plain; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.svg':'image/svg+xml','.mp4':'video/mp4','.mp3':'audio/mpeg'}[path.extname(relative)];
-        if(relative==='assets/class-film.mp4'){
+        if(relative==='assets/class-film.mp4'||relative==='assets/mj-voice-v1.mp3'){
           const headers={'Content-Type':type,'Accept-Ranges':'bytes','Cache-Control':'public, max-age=3600'};
           if(req.headers.range){
             const range=/^bytes=(\d*)-(\d*)$/.exec(req.headers.range);

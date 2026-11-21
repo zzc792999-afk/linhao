@@ -280,6 +280,7 @@ export const mascots=[
 ];
 
 export const arcadeSchema=[
+  'CREATE TABLE IF NOT EXISTS class_hen_hatches(day TEXT NOT NULL,owner TEXT NOT NULL,PRIMARY KEY(day,owner))',
   'CREATE TABLE IF NOT EXISTS class_arcade_profiles(owner TEXT PRIMARY KEY,name TEXT NOT NULL,mascot TEXT NOT NULL)',
   'CREATE TABLE IF NOT EXISTS class_arcade_feeds(day TEXT NOT NULL,owner TEXT NOT NULL,mascot TEXT NOT NULL,PRIMARY KEY(day,owner,mascot))',
   'CREATE INDEX IF NOT EXISTS class_arcade_feeds_mascot ON class_arcade_feeds(mascot)',
@@ -304,6 +305,14 @@ export function arcadeStore(query){
     async arcadeCleanup(day,now){await query('DELETE FROM class_arcade_attempts WHERE day<$1 AND revoked=0',[day]);await query('DELETE FROM class_arcade_tickets WHERE expires_at<$1',[now])},
     arcadeSaveProfile:(owner,name,mascot)=>query('INSERT INTO class_arcade_profiles(owner,name,mascot) VALUES($1,$2,$3) ON CONFLICT(owner) DO UPDATE SET name=excluded.name,mascot=excluded.mascot',[owner,name,mascot]),
     arcadeFeed:(day,owner,mascot)=>query('INSERT INTO class_arcade_feeds(day,owner,mascot) VALUES($1,$2,$3) ON CONFLICT(day,owner,mascot) DO NOTHING',[day,owner,mascot]),
+    async henFlock(day,owner){
+      const [state]=await rows('SELECT COUNT(*) AS total, COUNT(CASE WHEN owner=$2 THEN 1 END) AS mine FROM class_hen_hatches WHERE day=$1',[day,owner]);
+      return {day,total:Number(state.total),hatched:Number(state.mine)>0};
+    },
+    async hatchHenChick(day,owner){
+      const result=await query('INSERT INTO class_hen_hatches(day,owner) VALUES($1,$2) ON CONFLICT(day,owner) DO NOTHING',[day,owner]);
+      return Number(result.rowCount)>0;
+    },
     async arcadeState(owner,day){
       const [me,totals,fed,best,reactionLeaderboard,drawings,settingsRows]=await Promise.all([
         profile(owner),rows('SELECT mascot,COUNT(*) AS n FROM class_arcade_feeds GROUP BY mascot'),

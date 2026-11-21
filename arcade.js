@@ -12,6 +12,18 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
  const timestamp=now(),day=dayAt(timestamp),date=new Date(timestamp).toISOString();
  const state=()=>db.arcadeState(owner,day);
  if(route==='/api/arcade'&&req.method==='GET'){send(200,await state());return true}
+ if(route==='/api/arcade/chicks'){
+  if(req.method==='GET'){
+   send(200,await db.henFlock(day,owner));
+  }else if(req.method==='POST'){
+   await readJson(req);
+   const created=await db.hatchHenChick(day,owner);
+   send(created?201:200,{...await db.henFlock(day,owner),created});
+  }else{
+   send(405,{error:'不支持的请求方式'});
+  }
+  return true;
+ }
  if(route==='/api/arcade/profile'&&req.method==='PUT'){
   const b=await readJson(req);if(typeof b.name!=='string'||!b.name.trim()||b.name.length>16||!mascotOk(b.mascot)){send(400,{error:'昵称需要 1–16 字，并选择一位吉祥物'});return true}
   await db.arcadeSaveProfile(owner,b.name.trim(),b.mascot);send(200,await state());return true;

@@ -1,6 +1,24 @@
 'use strict';
-// A small, local-only screen companion; eggs never write to the database.
 (() => {
+  const henEggArt = `<svg viewBox="0 0 48 52" aria-hidden="true">
+    <path d="M24 5C15 5 7 24 7 34a17 17 0 1 0 34 0C41 24 33 5 24 5Z" fill="#fff1cb" stroke="#503824" stroke-width="2.5"/>
+    <path d="M13 35q6 10 18 8" fill="none" stroke="#dbac70" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="18" cy="29" r="1.5" fill="#d8a371"/><circle cx="30" cy="35" r="2" fill="#d8a371"/>
+  </svg>`;
+  const henChickArt = `<svg viewBox="0 0 56 58" aria-hidden="true">
+    <g stroke="#503824" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m22 41-3 12-7 1m20-12 4 10 7 1" fill="none"/>
+      <path d="M16 24q-4-9 3-12l5 4q-1-10 5-9l4 9q14 2 12 17-1 13-17 13Q9 47 9 34q0-7 7-10Z" fill="#ffda73"/>
+      <path d="m43 26 10 5-10 4" fill="#f19b43"/>
+      <path d="M18 33q4 7 11 2" fill="none"/>
+      <circle cx="36" cy="24" r="5" fill="#fff6dc"/><circle cx="37" cy="25" r="1.25" fill="#503824" stroke="none"/>
+    </g>
+  </svg>`;
+  const nestArt = `<svg viewBox="0 0 126 51" aria-hidden="true">
+    <ellipse cx="63" cy="21" rx="59" ry="17" fill="#96704f"/>
+    <path d="M5 21q58 19 116 0-10 25-58 26Q15 46 5 21Z" fill="#d7ad64" stroke="#68462d" stroke-width="2"/>
+    <path d="m14 27 30 14m-18-12 34 16m-7-10 30 8m-5-11 20 7m1-13 13 7M8 20l18-6m71-2 21 7" stroke="#a47743" stroke-width="2" stroke-linecap="round"/>
+  </svg>`;
   const start = () => {
     if (document.getElementById('wandering-hen')) return;
     const hen = document.createElement('button');
@@ -25,69 +43,272 @@
         </g>
       </g></svg>`;
     hen.setAttribute('aria-label', '点击小鸡下蛋');
-    hen.title = '点我下蛋，再点蛋看看！';
+    const nest = document.createElement('div');
+    nest.className = 'hen-nest';
+    nest.innerHTML = nestArt;
+    nest.setAttribute('aria-hidden', 'true');
+    nest.hidden = true;
+    const flock = document.createElement('div');
+    flock.className = 'hen-flock';
+    flock.setAttribute('aria-hidden', 'true');
     const notice = document.createElement('div');
     notice.className = 'hen-notice';
     notice.setAttribute('role', 'status');
-    document.body.append(hen, notice);
-    const eggs = new Set();
+    document.body.append(nest, hen, flock, notice);
+
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    let x = 24, direction = 1, last = 0, pausedUntil = 0, laidAt = 0, noticeTimer;
-    const edge = () => Math.max(0, innerWidth - 104);
-    const place = () => {
-      x = Math.max(0, Math.min(edge(), x));
-      hen.style.left = `${x}px`;
+    const clock = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', hourCycle: 'h23'
+    });
+    const chickParts = [];
+    let x = 24, direction = 1, henWidth = 100, last = 0, frame = null;
+    let sleeping = false, goingHome = false, restTime = false, pausedUntil = 0;
+    let day = '', crowedDay = '', noticeTimer, egg = null, eggTimer;
+    let flockCount = 0, hatched = false, syncing = false, hatching = false, flockRevision = 0;
+    let audioContext;
+
+    const edge = () => Math.max(0, innerWidth - henWidth);
+    const home = () => Math.max(0, edge() - 24);
+    const clampEgg = left => Math.max(0, Math.min(innerWidth - 48, left));
+    const say = message => {
+      notice.textContent = message;
+      notice.classList.add('visible');
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => notice.classList.remove('visible'), 2200);
     };
+    function updateTitle() {
+      hen.title = '全班今天孵出了 ' + flockCount + ' 只小鸡 · ' +
+        (sleeping ? '鸡群已归巢' : hatched ? '你今天已经孵过了' : '点我下蛋，再点蛋孵小鸡');
+    }
+    function unlockAudio() {
+      try {
+        const Audio = window.AudioContext || window.webkitAudioContext;
+        if (Audio && !audioContext) audioContext = new Audio();
+        audioContext?.resume().catch(() => {});
+      } catch {}
+    }
+    function crow() {
+      say('喔喔喔！早上好');
+      hen.classList.add('hen-crowing');
+      setTimeout(() => hen.classList.remove('hen-crowing'), 1300);
+      if (audioContext?.state !== 'running') return;
+      const start = audioContext.currentTime + .04;
+      for (const [index, frequency] of [410, 520, 440, 360].entries()) {
+        const at = start + index * .16;
+        const voice = audioContext.createOscillator();
+        const volume = audioContext.createGain();
+        voice.type = 'triangle';
+        voice.frequency.setValueAtTime(frequency, at);
+        voice.frequency.exponentialRampToValueAtTime(frequency * .8, at + .14);
+        volume.gain.setValueAtTime(.001, at);
+        volume.gain.exponentialRampToValueAtTime(.08, at + .04);
+        volume.gain.exponentialRampToValueAtTime(.001, at + .15);
+        voice.connect(volume).connect(audioContext.destination);
+        voice.start(at);
+        voice.stop(at + .16);
+      }
+    }
+    function clearEgg() {
+      clearTimeout(eggTimer);
+      egg?.remove();
+      egg = null;
+    }
+    function renderPositions(now = 0) {
+      const moving = !sleeping && !reduced.matches && now > pausedUntil;
+      const hop = moving ? Math.abs(Math.sin(now / 130)) * 5 : 0;
+      const tilt = moving ? Math.sin(now / 130) * 7 : 0;
+      hen.style.left = `${x}px`;
+      hen.style.transform = `scaleX(${direction}) translateY(${-hop}px) rotate(${tilt}deg)`;
+      const columns = sleeping ? 5 : Math.max(1, Math.min(10, Math.floor(innerWidth / 44) - 1));
+      for (let i = 0; i < chickParts.length; i++) {
+        const col = i % columns, row = Math.floor(i / columns);
+        const travel = henWidth / 2 + 12 + col * 30;
+        const at = sleeping ? innerWidth - 124 + col * 18 : x + henWidth / 2 - 22 - direction * travel;
+        const padding = Math.max(0, innerWidth - 44);
+        const wrapped = at < 0 ? Math.min(padding, -at) : at > padding ? Math.max(0, padding * 2 - at) : at;
+        const bounce = moving ? Math.abs(Math.sin(now / 140 - i * .75)) * 4 : 0;
+        chickParts[i].style.transform = `translate3d(${wrapped}px,${-Math.min(row * 19, 76) - bounce}px,0) scaleX(${direction})`;
+      }
+    }
+    function setFlock(total) {
+      flockCount = total;
+      while (chickParts.length > total) chickParts.pop().remove();
+      while (chickParts.length < total) {
+        const chick = document.createElement('span');
+        chick.className = 'hen-chick';
+        chick.innerHTML = henChickArt;
+        flock.append(chick);
+        chickParts.push(chick);
+      }
+      renderPositions();
+      updateTitle();
+    }
+    function readClock() {
+      const parts = Object.fromEntries(clock.formatToParts().map(({type,value}) => [type,value]));
+      const today = `${parts.year}-${parts.month}-${parts.day}`;
+      if (day !== today) {
+        day = today;
+        hatched = false;
+        clearEgg();
+        setFlock(0);
+      }
+      const hour = Number(parts.hour);
+      const newRestTime = hour >= 20 || hour < 8;
+      const firstClock = !nest.dataset.ready;
+      nest.dataset.ready = 'true';
+      if (firstClock || newRestTime !== restTime) {
+        restTime = newRestTime;
+        sleeping = restTime && (firstClock || reduced.matches);
+        goingHome = restTime && !sleeping;
+        nest.hidden = !restTime;
+        if (sleeping) x = home();
+        if (!restTime && x >= home()) direction = -1;
+        hen.classList.toggle('hen-sleeping', sleeping);
+        flock.classList.toggle('hen-sleeping', sleeping);
+        renderPositions();
+        updateTitle();
+        updateMotion();
+      }
+      if (!document.hidden && hour >= 8 && hour < 10 && crowedDay !== day) {
+        const key = 'class2501-hen-crow-day';
+        try { crowedDay = localStorage.getItem(key) || crowedDay; } catch {}
+        if (crowedDay !== day) {
+          crowedDay = day;
+          try { localStorage.setItem(key, day); } catch {}
+          crow();
+        }
+      }
+    }
+    async function getFlock(method = 'GET') {
+      const response = await fetch('/api/arcade/chicks', {
+        method, credentials: 'same-origin', signal: AbortSignal.timeout(12000),
+        ...(method === 'POST' ? {headers: {'Content-Type': 'application/json'}, body: '{}'} : {})
+      });
+      if (!response.ok) throw Error('鸡群暂时连不上，稍后再试');
+      return response.json();
+    }
+    function applyFlock(state) {
+      if (state.day !== day) readClock();
+      if (state.day !== day) return;
+      hatched = state.hatched;
+      setFlock(state.total);
+      if (hatched) clearEgg();
+    }
+    async function syncFlock() {
+      if (syncing || hatching || document.hidden || document.body.dataset.mode !== 'live') return;
+      syncing = true;
+      const revision = flockRevision;
+      try {
+        const state = await getFlock();
+        if (revision === flockRevision && !hatching) applyFlock(state);
+      } catch {} finally { syncing = false; }
+    }
+    async function hatch(event) {
+      if (hatching) return;
+      hatching = true;
+      flockRevision++;
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        const state = await getFlock('POST');
+        applyFlock(state);
+        clearEgg();
+        if (event.detail === 0) hen.focus({preventScroll: true});
+        say(state.created ? '滚木！小鸡孵出来啦' : '你今天已经孵过一只了');
+      } catch {
+        if (button.isConnected) button.disabled = false;
+        say('孵化请求没连上，点鸡蛋再试一次');
+      } finally { hatching = false; }
+    }
     hen.addEventListener('click', () => {
-      const now = performance.now();
-      if (now - laidAt < 450) return;
-      laidAt = now;
-      pausedUntil = now + 900;
-      hen.classList.remove('hen-laying');
-      void hen.offsetWidth;
-      hen.classList.add('hen-laying');
-      setTimeout(() => hen.classList.remove('hen-laying'), 650);
-      if (eggs.size >= 6) { const oldest = eggs.values().next().value; oldest.remove(); eggs.delete(oldest); }
-      const egg = document.createElement('button');
+      unlockAudio();
+      if (document.body.dataset.mode !== 'live') { say('请到班级正式网站孵小鸡'); return; }
+      if (hatching) return;
+      if (hatched) { say('你今天已经孵过一只了'); return; }
+      if (egg) { say('点鸡蛋，孵出小鸡'); return; }
+      const left = x - 52, right = x + henWidth + 4;
+      const behind = direction > 0 ? left : right;
+      const beside = direction > 0 ? right : left;
+      const at = clampEgg(behind) === behind ? behind : clampEgg(beside);
+      egg = document.createElement('button');
       egg.type = 'button';
       egg.className = 'hen-egg';
-      egg.textContent = '🥚';
-      egg.style.left = `${Math.min(x + 8, Math.max(0, innerWidth - 48))}px`;
-      egg.setAttribute('aria-label', '打开小鸡下的蛋');
+      egg.innerHTML = henEggArt;
+      egg.style.left = `${at}px`;
+      egg.title = '点一下孵出小鸡';
+      egg.setAttribute('aria-label', egg.title);
+      egg.addEventListener('click', hatch);
       document.body.append(egg);
-      eggs.add(egg);
-      const expiry = setTimeout(() => { egg.remove(); eggs.delete(egg); }, 20000);
-      egg.addEventListener('click', () => {
-        clearTimeout(expiry);
-        egg.disabled = true;
-        egg.classList.add('hatched');
-        egg.textContent = '◡ ◡';
-        egg.setAttribute('aria-label', '空蛋壳');
-        notice.textContent = '滚木';
-        notice.classList.add('visible');
-        clearTimeout(noticeTimer);
-        noticeTimer = setTimeout(() => notice.classList.remove('visible'), 1800);
-        setTimeout(() => { egg.remove(); eggs.delete(egg); }, 1600);
-      }, { once: true });
+      eggTimer = setTimeout(clearEgg, 30000);
+      hen.classList.add('hen-laying');
+      setTimeout(() => hen.classList.remove('hen-laying'), 650);
+      pausedUntil = performance.now() + 300;
     });
-    hen.addEventListener('mouseenter', () => { pausedUntil = performance.now() + 1500; });
-    addEventListener('resize', () => { place(); for (const egg of eggs) egg.style.left = `${Math.min(parseFloat(egg.style.left), Math.max(0, innerWidth - 48))}px`; });
-    const walk = now => {
+
+    function walk(now) {
       const dt = last ? Math.min((now - last) / 1000, .05) : 0;
       last = now;
-      if (!reduced.matches && now > pausedUntil && document.activeElement !== hen) {
-        x += direction * dt * 36;
+      if (goingHome) {
+        const remaining = home() - x;
+        if (Math.abs(remaining) <= 3) {
+          x = home();
+          goingHome = false;
+          sleeping = true;
+          hen.classList.add('hen-sleeping');
+          flock.classList.add('hen-sleeping');
+          updateTitle();
+        } else {
+          direction = Math.sign(remaining);
+          x += direction * Math.min(Math.abs(remaining), dt * 105);
+        }
+      } else if (!sleeping && now > pausedUntil) {
+        x = Math.min(edge(), Math.max(0, x + direction * dt * 36));
         if (x >= edge()) direction = -1;
-        if (x <= 0) direction = 1;
-        place();
-        hen.style.transform = `scaleX(${direction}) translateY(${-Math.abs(Math.sin(now / 130)) * 5}px) rotate(${Math.sin(now / 130) * 7}deg)`;
+        else if (x <= 0) direction = 1;
       }
-      requestAnimationFrame(walk);
-    };
-    place();
-    requestAnimationFrame(walk);
+      renderPositions(now);
+      frame = sleeping ? null : requestAnimationFrame(walk);
+    }
+    function updateMotion() {
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null;
+      last = 0;
+      const paused = document.hidden || reduced.matches || sleeping || hen.hidden ||
+        document.body.classList.contains('hen-resting');
+      if (reduced.matches && goingHome) {
+        x = home();
+        goingHome = false;
+        sleeping = true;
+        hen.classList.add('hen-sleeping');
+        flock.classList.add('hen-sleeping');
+        renderPositions();
+      }
+      hen.classList.toggle('hen-paused', paused);
+      if (!paused) frame = requestAnimationFrame(walk);
+    }
+    function resize() {
+      henWidth = hen.offsetWidth || 100;
+      x = sleeping ? home() : Math.min(edge(), x);
+      if (egg) egg.style.left = `${clampEgg(parseFloat(egg.style.left))}px`;
+      renderPositions();
+    }
+    window.addEventListener('resize', resize);
+    window.addEventListener('class-hen-preference', updateMotion);
+    window.addEventListener('online', syncFlock);
+    reduced.addEventListener('change', updateMotion);
+    document.addEventListener('visibilitychange', () => {
+      readClock();
+      updateMotion();
+      if (!document.hidden) syncFlock();
+    });
+    resize();
+    readClock();
+    syncFlock();
+    setInterval(() => { if (!document.hidden) readClock(); }, 15000);
+    setInterval(syncFlock, 30000);
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once: true});
   else start();
 })();
 (() => {

@@ -25,6 +25,20 @@ for(const backend of ['sqlite','postgres'])test(backend+': arcade feeding, score
   server=await createApp(dir,store);await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
   const client=()=>{const cookies=new Map();return async(route,method='GET',body,headers={})=>{const r=await fetch(base+'/api'+route,{method,headers:{'Content-Type':'application/json',Cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})});for(const raw of r.headers.getSetCookie()){const pair=raw.split(';')[0],at=pair.indexOf('=');cookies.set(pair.slice(0,at),pair.slice(at+1))}return {status:r.status,data:await r.json()}}};
   const artist=client(),other=client(),solver=client(),admin=client();
+  const initialFlock=(await artist('/arcade/chicks')).data;
+  assert.equal(initialFlock.total,0);
+  assert.equal(initialFlock.hatched,false);
+  await other('/arcade/chicks');
+  const hatches=await Promise.all([
+    artist('/arcade/chicks','POST',{}),artist('/arcade/chicks','POST',{})
+  ]);
+  assert.deepEqual(hatches.map(result=>result.status).sort(),[200,201]);
+  assert.ok(hatches.every(result=>result.data.total===1&&result.data.hatched));
+  const observed=(await other('/arcade/chicks')).data;
+  assert.deepEqual(observed,{day:initialFlock.day,total:1,hatched:false});
+  assert.equal((await other('/arcade/chicks','POST',{})).data.total,2);
+  assert.equal((await artist('/arcade/chicks')).data.total,2);
+  assert.equal((await store.henFlock('2000-01-01','test-owner')).hatched,false);
   let state=(await artist('/arcade')).data;assert.equal(state.pets.length,23);assert.equal(state.my.name,'路过的同学');assert.equal(state.my.mascot,'panda');assert.equal(state.my.bestReaction,null);const wuba0=state.pets.find(p=>p.id==='wuba');assert.equal(wuba0.name,'小萝卜');assert.equal(wuba0.formIndex,0);
   const newMascotFan=client();
   for(const id of ['wuliangye','penguin']){

@@ -54,7 +54,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
           }
         }
         // Only serve explicit public files, never the database or server source.
-        const isAllowedAsset = /^assets\/(p[123]\.jpg|rednose-classmate\.svg|class-film\.mp4|liubang-\d(-full)?\.jpg)$/.test(relative) ||
+        const isAllowedAsset = /^assets\/(p[123]\.jpg|rednose-classmate\.svg|class-film\.mp4|mj-voice-v1\.mp3|liubang-\d(-full)?\.jpg)$/.test(relative) ||
           /^assets\/mascots-v1\/(?:pig|turtle|chicken|cat|owl|dog|panda|rednose|hippo|horse|donkeycat|wuba|triangle|beetle|shoe|oil|toe|arowana|squirtle|buckteeth|wuliangye|penguin|liubang-1|liubang-2|liubang-3|liubang-4|liubang-5)\.svg$/.test(relative);
         const allowedPages = ['index.html','admin.html','dongzhi.html','dongzhi.css','dongzhi.js','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','chicken-battle.css','chicken-battle.js','meme-lab.css','meme-lab.js','site-polish.css','site-polish.js','fun.js','app.js','style.css'];
         allowedPages.push('2e3e59b8e9a904ddb6936dec7a10a6d3.txt');
@@ -67,7 +67,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         }
         // The Node deployment enables the shared API; static hosting stays a preview.
         if(relative==='index.html')content=Buffer.from(content.toString('utf8').replace('data-mode="preview"','data-mode="live"'));
-        const type = {'.txt':'text/plain; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.svg':'image/svg+xml','.mp4':'video/mp4'}[path.extname(relative)];
+        const type = {'.txt':'text/plain; charset=utf-8','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.svg':'image/svg+xml','.mp4':'video/mp4','.mp3':'audio/mpeg'}[path.extname(relative)];
         if(relative==='assets/class-film.mp4'){
           const headers={'Content-Type':type,'Accept-Ranges':'bytes','Cache-Control':'public, max-age=3600'};
           if(req.headers.range){

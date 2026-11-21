@@ -552,8 +552,8 @@ body.dark .back-to-top-btn {
   transform: translateX(-50%);
   display: grid;
   justify-items: center;
-  animation: spiderDropIn .72s cubic-bezier(.2,.7,.25,1.12) both,
-    spiderRetract .55s ease-in 3.65s forwards;
+  animation: spiderDropIn .56s cubic-bezier(.2,.7,.25,1.12) both,
+    spiderRetract .55s ease-in 2.42s forwards;
 }
 .spider-mj-actor {
   display: block;
@@ -579,7 +579,7 @@ body.dark .back-to-top-btn {
   height: auto;
   filter: drop-shadow(1px 5px 4px #17223033);
   transform-origin: center top;
-  animation: spiderGentleSway 1.4s ease-in-out .72s infinite alternate;
+  animation: spiderGentleSway 1.4s ease-in-out .56s infinite alternate;
 }
 @keyframes spiderDropIn {
   from { transform: translate(-50%, -110%); }

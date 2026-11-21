@@ -273,7 +273,7 @@ if (backToTopBtn) {
 })();
 
 
-// The MJ easter egg uses the source recording when the page configures one.
+// The MJ easter egg uses the short audio excerpt from the reference recording.
 let isSpiderMJRunning = false;
 const spiderPhrases = [
   'MJ · 倒挂比心',
@@ -286,8 +286,7 @@ function triggerSpiderMJ(customText) {
   isSpiderMJRunning = true;
 
   const phrase = customText || spiderPhrases[Math.floor(Math.random() * spiderPhrases.length)];
-  const audioSource = document.querySelector('meta[name="mj-audio"]')?.content;
-  const soundtrack = audioSource ? new Audio(audioSource) : null;
+  const soundtrack = document.getElementById('mj-soundtrack');
   const playClip = () => {
     if (soundtrack?.paused && !soundtrack.ended) soundtrack.play().catch(() => {});
   };
@@ -376,13 +375,14 @@ function triggerSpiderMJ(customText) {
     clearTimeout(closeTimer);
     document.removeEventListener('keydown', dismiss);
     soundtrack?.pause();
+    if (soundtrack) soundtrack.currentTime = 0;
     overlay.remove();
     isSpiderMJRunning = false;
   };
   const dismiss = event => {
     if (event.key === 'Escape') close();
   };
-  const closeTimer = setTimeout(close, 4200);
+  const closeTimer = setTimeout(close, 3100);
   document.addEventListener('keydown', dismiss);
 }
 window.triggerSpiderMJ = triggerSpiderMJ;

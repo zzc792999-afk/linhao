@@ -30,20 +30,26 @@
 .hen-chick svg { animation: hen-chick-pop .45s ease-out both; }
 .hen-nest { right: 10px; width: 174px; height: 66px; z-index: 898; pointer-events: none; }
 .hen-nest-chicks {
-  position: absolute; right: 19px; bottom: 19px;
-  display: grid; grid-template-columns: repeat(2, 25px); gap: 0 4px;
-  justify-items: center;
+  position: absolute; inset: 0;
 }
-.hen-nest-chicks > span { width: 25px; height: 26px; }
-.hen-nest-count {
-  position: absolute; top: -14px; right: 12px;
-  padding: 2px 6px; border: 1px solid #d7aa65; border-radius: 999px;
-  background: #fff3d8; color: #6b482d; font: 700 11px/1.4 system-ui, sans-serif;
+.hen-nest-chicks > span {
+  position: absolute;
+  width: 31px; height: 28px;
 }
+.hen-nest-chicks > :nth-child(1) { left: 30px; bottom: 21px; transform: rotate(9deg); }
+.hen-nest-chicks > :nth-child(2) { left: 107px; bottom: 20px; transform: scaleX(-1) rotate(10deg); }
+.hen-nest-chicks > :nth-child(3) { left: 15px; bottom: 19px; transform: rotate(14deg) scale(.83); }
+.hen-nest-chicks > :nth-child(4) { left: 130px; bottom: 17px; transform: scaleX(-.82) rotate(12deg) scaleY(.82); }
+.hen-nest-chicks > :nth-child(5) { left: 103px; bottom: 14px; transform: scaleX(-.77) rotate(3deg) scaleY(.77); }
 .hen-flock.hen-sleeping { display: none; }
 .wandering-hen.hen-sleeping .weird-hen-art {
-  transform: translate(-3px, -8px) scale(.67); transform-origin: 45% 100%;
+  transform: translateY(-16px) scale(.67); transform-origin: 50% 100%;
 }
+.hen-closed-eyes,
+.hen-sleeping .hen-open-eyes,
+.hen-sleeping .hen-leg-a,
+.hen-sleeping .hen-leg-b { display: none; }
+.hen-sleeping .hen-closed-eyes { display: inline; }
 .hen-sleeping *, .hen-paused * { animation-play-state: paused; }
 .hen-crowing .hen-wobble { animation: hen-neck .15s ease-in-out 8 alternate; }
 .hen-crowing .hen-wobble { animation-play-state: running; }

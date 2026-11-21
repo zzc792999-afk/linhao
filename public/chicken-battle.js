@@ -22,6 +22,13 @@
     <path d="m29 34 12 6m7-8 14 8m48 3 15-7m-1 11 15-7" stroke="#f4cf83" stroke-width="2" stroke-linecap="round"/>
     <path d="M16 40 3 34m17 11-9 2m145-9 14-9m-10 13 10 1" stroke="#a67645" stroke-width="2" stroke-linecap="round"/>
   </svg>`;
+  const sleepyChickArt = `<svg viewBox="0 0 40 35" aria-hidden="true">
+    <path d="M8 25q-5-7 1-14l6 1q-2-6 3-6l4 4q10-1 12 10l4 4-5 3q-9 8-21 3Z"
+      fill="#ffda79" stroke="#66482f" stroke-width="2.1" stroke-linejoin="round"/>
+    <path d="m34 20 4 4-5 1M24 19q2 3 5 0M14 24q3 4 7 1" fill="none"
+      stroke="#66482f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    <ellipse cx="27" cy="24" rx="3.4" ry="1.7" fill="#ed9c76"/>
+  </svg>`;
   const start = () => {
     if (document.getElementById('wandering-hen')) return;
     const hen = document.createElement('button');
@@ -39,9 +46,12 @@
           <path d="m69 31-9-14q-2-9 8-5l7 10-1-16q6-8 10 2l1 13 7-10q11-3 8 7l-12 15" fill="#ef4f50"/>
           <path d="m89 44 24 10-24 5Z" fill="#ffb735"/>
           <path d="M86 59q12 16 0 16-10-3-6-15" fill="#ef4f50"/>
-          <ellipse cx="72" cy="42" rx="10" ry="12" fill="white"/>
-          <ellipse cx="88" cy="39" rx="8" ry="9" fill="white"/>
-          <path d="m70 43 1 4m19-12 1 3" stroke-width="5"/>
+          <g class="hen-open-eyes">
+            <ellipse cx="72" cy="42" rx="10" ry="12" fill="white"/>
+            <ellipse cx="88" cy="39" rx="8" ry="9" fill="white"/>
+            <path d="m70 43 1 4m19-12 1 3" stroke-width="5"/>
+          </g>
+          <path class="hen-closed-eyes" d="M68 40q4 7 9 0m6-2q4 6 8 0" fill="none"/>
           <path d="m65 64 8 2m-9 5 6 2" stroke="#c8ad79" stroke-width="2"/>
         </g>
       </g></svg>`;
@@ -53,10 +63,7 @@
     nest.hidden = true;
     const restingChicks = document.createElement('div');
     restingChicks.className = 'hen-nest-chicks';
-    const overflowCount = document.createElement('span');
-    overflowCount.className = 'hen-nest-count';
-    overflowCount.hidden = true;
-    nest.append(restingChicks, overflowCount);
+    nest.append(restingChicks);
     const flock = document.createElement('div');
     flock.className = 'hen-flock';
     flock.setAttribute('aria-hidden', 'true');
@@ -78,7 +85,7 @@
     let audioContext;
 
     const edge = () => Math.max(0, innerWidth - henWidth);
-    const home = () => Math.max(0, Math.min(edge(), innerWidth - 170));
+    const home = () => Math.max(0, Math.min(edge(), innerWidth - 97 - henWidth / 2));
     const clampEgg = left => Math.max(0, Math.min(innerWidth - 48, left));
     const say = message => {
       notice.textContent = message;
@@ -142,16 +149,13 @@
       }
     }
     function renderNestChicks() {
-      const visible = sleeping ? Math.min(flockCount, 4) : 0;
+      const visible = sleeping ? Math.min(flockCount, 5) : 0;
       while (restingChicks.childElementCount > visible) restingChicks.lastElementChild.remove();
       while (restingChicks.childElementCount < visible) {
         const chick = document.createElement('span');
-        chick.innerHTML = henChickArt;
+        chick.innerHTML = sleepyChickArt;
         restingChicks.append(chick);
       }
-      const more = sleeping ? flockCount - visible : 0;
-      overflowCount.hidden = more === 0;
-      overflowCount.textContent = more > 0 ? '+' + more : '';
     }
     function setSleeping(value) {
       sleeping = value;

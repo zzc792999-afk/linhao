@@ -273,236 +273,24 @@ if (backToTopBtn) {
 })();
 
 
-// ========================================================
-// MJ Spider-Man Easter Egg (抖音同款经典卡点配乐 + 倒挂比心)
-// ========================================================
+// The MJ easter egg uses the source recording when the page configures one.
 let isSpiderMJRunning = false;
 const spiderPhrases = [
-  '🕷️ MJ · Smooth Criminal 🕺',
-  '25计1 · 经典卡点 Hee-Hee! ⚡',
-  '专属守护 · BUG 全消 ✨',
-  '双厨狂喜 · 蜘蛛侠跳太空步 🐾',
-  '青春不设限 · 一起发光 💕'
+  'MJ · 倒挂比心',
+  '25计1 · 来一颗爱心',
+  '蜘蛛侠 · 路过教室'
 ];
-
-function playMJSmoothCriminal() {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    if (ctx.state === 'suspended') ctx.resume();
-
-    const bpm = 118;
-    const beat = 60 / bpm; // ~0.508s
-    const s16 = beat / 4;  // ~0.127s
-    const startTime = ctx.currentTime + 0.03;
-
-    // Master dynamic compressor for punchy 80s studio groove
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.setValueAtTime(-16, startTime);
-    comp.knee.setValueAtTime(8, startTime);
-    comp.ratio.setValueAtTime(6, startTime);
-    comp.attack.setValueAtTime(0.003, startTime);
-    comp.release.setValueAtTime(0.15, startTime);
-    comp.connect(ctx.destination);
-
-    // Initial web shoot thwip
-    const thwipDur = 0.12;
-    const thwipBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * thwipDur), ctx.sampleRate);
-    const thwipData = thwipBuf.getChannelData(0);
-    for (let i = 0; i < thwipData.length; i++) {
-      thwipData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.03));
-    }
-    const thwipSource = ctx.createBufferSource();
-    thwipSource.buffer = thwipBuf;
-    const thwipFilter = ctx.createBiquadFilter();
-    thwipFilter.type = 'bandpass';
-    thwipFilter.frequency.setValueAtTime(1200, startTime);
-    thwipFilter.frequency.exponentialRampToValueAtTime(3200, startTime + 0.1);
-    const thwipGain = ctx.createGain();
-    thwipGain.gain.setValueAtTime(0.35, startTime);
-    thwipGain.gain.exponentialRampToValueAtTime(0.001, startTime + thwipDur);
-    thwipSource.connect(thwipFilter);
-    thwipFilter.connect(thwipGain);
-    thwipGain.connect(comp);
-    thwipSource.start(startTime);
-
-    // Heavy Kick Drum
-    function playKick(t) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.setValueAtTime(130, t);
-      osc.frequency.exponentialRampToValueAtTime(36, t + 0.12);
-      gain.gain.setValueAtTime(0.95, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-      osc.connect(gain);
-      gain.connect(comp);
-      osc.start(t);
-      osc.stop(t + 0.22);
-    }
-
-    // 80s Snare / Clap with noise burst
-    function playSnare(t) {
-      const dur = 0.18;
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
-      }
-      const noise = ctx.createBufferSource();
-      noise.buffer = buf;
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.setValueAtTime(800, t);
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.65, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(comp);
-      noise.start(t);
-
-      const osc = ctx.createOscillator();
-      const oscGain = ctx.createGain();
-      osc.frequency.setValueAtTime(240, t);
-      osc.frequency.exponentialRampToValueAtTime(110, t + 0.08);
-      oscGain.gain.setValueAtTime(0.5, t);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-      osc.connect(oscGain);
-      oscGain.connect(comp);
-      osc.start(t);
-      osc.stop(t + 0.09);
-    }
-
-    // 16th Hi-Hat
-    function playHat(t, accent = false) {
-      const dur = 0.04;
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-      const noise = ctx.createBufferSource();
-      noise.buffer = buf;
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.setValueAtTime(7000, t);
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(accent ? 0.28 : 0.12, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(comp);
-      noise.start(t);
-    }
-
-    // Synth Brass / Slap Bass Note
-    function playSynthNote(freq, t, dur) {
-      const osc = ctx.createOscillator();
-      const sub = ctx.createOscillator();
-      const filter = ctx.createBiquadFilter();
-      const gain = ctx.createGain();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, t);
-
-      sub.type = 'square';
-      sub.frequency.setValueAtTime(freq / 2, t);
-
-      filter.type = 'lowpass';
-      filter.Q.setValueAtTime(4.5, t);
-      filter.frequency.setValueAtTime(freq * 6, t);
-      filter.frequency.exponentialRampToValueAtTime(freq * 1.5, t + dur * 0.75);
-
-      gain.gain.setValueAtTime(0.42, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-
-      osc.connect(filter);
-      sub.connect(filter);
-      filter.connect(gain);
-      gain.connect(comp);
-
-      osc.start(t);
-      sub.start(t);
-      osc.stop(t + dur);
-      sub.stop(t + dur);
-    }
-
-    // Iconic MJ "Hee-Hee! / Aow!" Vocal Shout
-    function playVocalHeeHee(t) {
-      const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(740, t);
-      osc.frequency.exponentialRampToValueAtTime(1080, t + 0.12);
-      osc.frequency.exponentialRampToValueAtTime(940, t + 0.38);
-
-      const f1 = ctx.createBiquadFilter();
-      f1.type = 'bandpass';
-      f1.frequency.setValueAtTime(800, t);
-      f1.Q.setValueAtTime(4.0, t);
-
-      const f2 = ctx.createBiquadFilter();
-      f2.type = 'bandpass';
-      f2.frequency.setValueAtTime(2600, t);
-      f2.Q.setValueAtTime(5.0, t);
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.001, t);
-      gain.gain.exponentialRampToValueAtTime(0.55, t + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
-
-      osc.connect(f1);
-      osc.connect(f2);
-      f1.connect(gain);
-      f2.connect(gain);
-      gain.connect(comp);
-
-      osc.start(t);
-      osc.stop(t + 0.45);
-    }
-
-    // Smooth Criminal notes in A minor
-    const A3 = 220, G3 = 196, B3 = 246.94, C4 = 261.63, E3 = 164.81;
-    const riff = [
-      [A3, 0, 1.8],
-      [A3, 2, 1.8],
-      [A3, 4, 1.8],
-      [G3, 6, 0.9],
-      [A3, 7, 0.9],
-      [B3, 8, 1.8],
-      [C4, 10, 1.8],
-      [B3, 12, 1.8],
-      [G3, 14, 1.8],
-      [E3, 16, 1.8],
-      [G3, 18, 1.8],
-      [A3, 20, 5.0]
-    ];
-
-    riff.forEach(([freq, offset, dur]) => {
-      playSynthNote(freq, startTime + offset * s16, dur * s16);
-    });
-
-    for (let i = 0; i < 28; i++) {
-      const t = startTime + i * s16;
-      playHat(t, i % 4 === 0);
-      if (i === 0 || i === 4 || i === 8 || i === 12 || i === 16 || i === 20 || i === 24) {
-        playKick(t);
-      }
-      if (i === 4 || i === 12 || i === 20) {
-        playSnare(t);
-      }
-    }
-
-    // Climax vocal shout on the drop (beat 20)
-    playVocalHeeHee(startTime + 20 * s16);
-  } catch (_) {}
-}
 
 function triggerSpiderMJ(customText) {
   if (isSpiderMJRunning) return;
   isSpiderMJRunning = true;
 
-  playMJSmoothCriminal();
-
   const phrase = customText || spiderPhrases[Math.floor(Math.random() * spiderPhrases.length)];
+  const audioSource = document.querySelector('meta[name="mj-audio"]')?.content;
+  const soundtrack = audioSource ? new Audio(audioSource) : null;
+  const playClip = () => {
+    if (soundtrack?.paused && !soundtrack.ended) soundtrack.play().catch(() => {});
+  };
 
   const overlay = document.createElement('div');
   overlay.className = 'spider-mj-overlay';
@@ -510,104 +298,92 @@ function triggerSpiderMJ(customText) {
 
   const rig = document.createElement('div');
   rig.className = 'spider-mj-rig';
-  rig.title = '点击蜘蛛侠，多爆几颗爱心！';
-
-  rig.innerHTML = `
-    <svg class="spider-mj-svg" viewBox="0 0 200 320" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="倒挂比心蜘蛛侠">
-      <line x1="100" y1="0" x2="100" y2="120" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
-      <line x1="100" y1="0" x2="100" y2="120" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round" opacity="0.3" />
-
-      <path d="M100 110 C80 90 60 115 72 140 C80 156 90 170 96 185" stroke="#1e40af" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="M100 110 C120 90 140 115 128 140 C120 156 110 170 104 185" stroke="#1e40af" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="M100 108 C86 98 76 112 73 125" stroke="#e11d48" stroke-width="14" stroke-linecap="round" />
-      <path d="M100 108 C114 98 124 112 127 125" stroke="#e11d48" stroke-width="14" stroke-linecap="round" />
-
-      <path d="M88 180 C82 195 82 210 85 224 C90 232 110 232 115 224 C118 210 118 195 112 180 Z" fill="#e11d48" stroke="#be123c" stroke-width="1.5" />
-      <path d="M86 185 C83 198 83 212 85 224 C89 224 93 218 93 205 C93 192 90 185 86 185 Z" fill="#1e40af" />
-      <path d="M114 185 C117 198 117 212 115 224 C111 224 107 218 107 205 C107 192 110 185 114 185 Z" fill="#1e40af" />
-      <line x1="100" y1="180" x2="100" y2="228" stroke="#881337" stroke-width="1.2" opacity="0.65" />
-      <path d="M88 198 Q100 190 112 198" stroke="#881337" stroke-width="1.2" fill="none" opacity="0.65" />
-      <path d="M89 212 Q100 204 111 212" stroke="#881337" stroke-width="1.2" fill="none" opacity="0.65" />
-      <ellipse cx="100" cy="202" rx="2.5" ry="3.5" fill="#0f172a" />
-      <path d="M98 200 Q94 195 91 199 M102 200 Q106 195 109 199 M98 204 Q93 208 90 205 M102 204 Q107 208 110 205" stroke="#0f172a" stroke-width="1" fill="none" />
-
-      <path d="M85 228 C76 242 78 266 92 276 C97 280 103 280 108 276 C122 266 124 242 115 228 C108 220 92 220 85 228 Z" fill="#e11d48" stroke="#be123c" stroke-width="1.5" />
-      <line x1="100" y1="222" x2="100" y2="279" stroke="#881337" stroke-width="1.2" opacity="0.65" />
-      <path d="M86 238 Q100 246 114 238" stroke="#881337" stroke-width="1.2" fill="none" opacity="0.65" />
-      <path d="M85 256 Q100 266 115 256" stroke="#881337" stroke-width="1.2" fill="none" opacity="0.65" />
-
-      <path d="M87 242 Q96 247 98 259 Q89 256 85 249 Z" fill="#ffffff" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round" />
-      <path d="M113 242 Q104 247 102 259 Q111 256 115 249 Z" fill="#ffffff" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round" />
-
-      <path d="M85 222 C70 230 68 250 82 264 C88 268 95 264 98 258" stroke="#e11d48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-      <path d="M115 222 C130 230 132 250 118 264 C112 268 105 264 102 258" stroke="#e11d48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-
-      <g class="spider-heart">
-        <path d="M100 272 C100 272 68 248 68 228 C68 214 80 204 92 214 C97 218 100 223 100 223 C100 223 103 218 108 214 C120 204 132 214 132 228 C132 248 100 272 100 272 Z" fill="url(#spiderHeartGrad)" filter="url(#spiderHeartGlow)" />
-        <path d="M76 226 C76 218 82 213 88 217" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.75" fill="none" />
-      </g>
-
+  const actor = document.createElement('button');
+  actor.type = 'button';
+  actor.className = 'spider-mj-actor';
+  actor.setAttribute('aria-label', '点击倒挂蜘蛛侠放出爱心');
+  actor.innerHTML = `
+    <svg class="spider-mj-svg" viewBox="0 0 196 236" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
-        <linearGradient id="spiderHeartGrad" x1="68" y1="208" x2="132" y2="272" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#ff3366" />
-          <stop offset="100%" stop-color="#c2002f" />
-        </linearGradient>
-        <filter id="spiderHeartGlow" x="50" y="190" width="100" height="100" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#ff1744" flood-opacity="0.8" />
-        </filter>
+        <pattern id="mj-mask-web" width="10" height="9" patternUnits="userSpaceOnUse">
+          <path d="M5 0v9M0 2q5 5 10 0M0 7q5 5 10 0" stroke="#842639" stroke-width=".75" opacity=".66"/>
+        </pattern>
       </defs>
-    </svg>
-    <div class="spider-mj-badge">
-      <span>🕷️</span>
-      <span>${phrase}</span>
-    </div>
-  `;
+      <g stroke="#182638" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M98 0v66m0-27q-9 12 0 21 8 0 0-7-8 8 0 10" stroke="#a2afbf" stroke-width="2"/>
+        <path d="m96 64-13 9m16-9 13 10" stroke="#c2cad4" stroke-width="2"/>
+        <g class="spider-mj-suit">
+          <!-- Bent legs and boots, anchored to the web. -->
+          <path d="M94 120 70 89 79 66l13 6-5 15 24 29Z" fill="#32527f" stroke-width="3.4"/>
+          <path d="M106 121 128 96 118 71l-13 4 6 20-23 20Z" fill="#273f69" stroke-width="3.4"/>
+          <path d="m74 80 5-14-7-9q-2-4 2-7 7-2 15 7l5 10-5 15Z" fill="#d64854" stroke-width="3"/>
+          <path d="m109 84-6-15 4-12q7-7 15-4 4 3 0 8l-4 7 5 13Z" fill="#d64854" stroke-width="3"/>
+          <path d="m76 73 14 4m16-1 14-6m-47-14 7 7m39-5-6 6" stroke="#7f2a3e" stroke-width="1.4"/>
+          <path d="M95 108q15-1 21 11l4 29-14 12H90l-13-12 5-29q3-9 13-11Z" fill="#d64854" stroke-width="3.4"/>
+          <path d="m85 121-6 23 11 11 4-15Zm26 0 7 23-11 11-4-15Z" fill="#32527f" stroke-width="1.4"/>
+          <path d="M98 121v29m-10-21q10 6 21 0m-18 10q8 4 15 0" stroke="#842639" stroke-width="1.2"/>
+          <path d="M98 132v11m-2-8-6-6m6 8-7-1m7 3-6 4m10-8 6-6m-6 8 7-1m-7 3 6 4" stroke-width="1.65"/>
+          <!-- Hands form a heart below the mask. -->
+          <path d="M82 135q-18 4-19 24-1 19 22 37l8-8q-17-15-15-26 0-7 10-13Z" fill="#d64854" stroke-width="3.4"/>
+          <path d="M114 135q18 4 20 24 2 19-22 37l-8-8q17-15 15-26-1-7-11-13Z" fill="#d64854" stroke-width="3.4"/>
+          <path d="m64 158 14 2m-12 9 14-4m53-7-14 2m12 9-14-4" stroke="#842639" stroke-width="1.55"/>
+          <path d="M79 162q6-14 19-14 16 0 21 14l1 19q-1 17-22 20-20-2-22-20Z" fill="#de5361" stroke-width="3.4"/>
+          <path d="M79 162q6-14 19-14 16 0 21 14l1 19q-1 17-22 20-20-2-22-20Z" fill="url(#mj-mask-web)" stroke="none"/>
+          <path d="M81 176q4-12 13-9l2 17q-9 0-15-8Zm34 0q-4-12-13-9l-2 17q9 0 15-8Z" fill="#fff8e9" stroke-width="2.9"/>
+          <path d="m86 174 3-2m21 2-3-2" stroke="#bfccd8" stroke-width="1.8"/>
+          <path d="M87 190q6-5 10 0l1 6-3 5q-8 0-11-8Zm23 0q-6-5-10 0l-1 6 3 5q8 0 11-8Z" fill="#f16d71" stroke-width="2.5"/>
+        </g>
+        <g class="spider-heart">
+          <path d="M98 226c-5-5-16-11-16-18 0-7 10-10 16-1 6-9 16-6 16 1 0 7-11 13-16 18Z" fill="#eb5264" stroke-width="2.4"/>
+          <path d="M87 209q0-4 5-4" stroke="#ffe0d7" stroke-width="1.8"/>
+        </g>
+        <path d="m60 201-9 3m13 6-4 7m73-16 9 3m-12 6 4 7" stroke="#e68a84" stroke-width="2.5"/>
+      </g>
+    </svg>`;
 
-  // Click interaction on spider
-  const emojis = ['💖', '💕', '✨', '🕷️', '❤️', '🌟'];
-  rig.addEventListener('click', (e) => {
-    e.stopPropagation();
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        const c = new AudioCtx();
-        const o = c.createOscillator();
-        o.type = 'sawtooth';
-        o.frequency.setValueAtTime(800, c.currentTime);
-        o.frequency.exponentialRampToValueAtTime(1100, c.currentTime + 0.1);
-        const g = c.createGain();
-        g.gain.setValueAtTime(0.4, c.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.25);
-        o.connect(g);
-        g.connect(c.destination);
-        o.start();
-        o.stop(c.currentTime + 0.25);
-      }
-    } catch (_) {}
+  const badge = document.createElement('span');
+  badge.className = 'spider-mj-badge';
+  badge.textContent = phrase;
+  badge.setAttribute('role', 'status');
 
-    for (let i = 0; i < 8; i++) {
-      const p = document.createElement('div');
-      p.className = 'spider-heart-particle';
-      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-      const angle = (Math.PI * 2 / 8) * i + (Math.random() * 0.4 - 0.2);
-      const dist = 55 + Math.random() * 65;
-      p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
-      p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
-      p.style.left = '90px';
-      p.style.top = '240px';
-      rig.appendChild(p);
-      setTimeout(() => p.remove(), 1100);
+  let lastBurst = -Infinity;
+  const hearts = ['♥', '♡', '✦'];
+  actor.addEventListener('click', () => {
+    playClip();
+    const now = performance.now();
+    if (now - lastBurst < 300) return;
+    lastBurst = now;
+    for (let i = 0; i < 7; i++) {
+      const particle = document.createElement('span');
+      particle.className = 'spider-heart-particle';
+      particle.textContent = hearts[i % hearts.length];
+      particle.setAttribute('aria-hidden', 'true');
+      const angle = (Math.PI * 2 / 7) * i;
+      const distance = 36 + Math.random() * 30;
+      particle.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+      particle.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+      rig.append(particle);
+      setTimeout(() => particle.remove(), 1100);
     }
   });
 
-  overlay.appendChild(rig);
-  document.body.appendChild(overlay);
+  rig.append(actor, badge);
+  overlay.append(rig);
+  document.body.append(overlay);
+  playClip();
 
-  // Auto clean-up after 4.1s
-  setTimeout(() => {
+  const close = () => {
+    clearTimeout(closeTimer);
+    document.removeEventListener('keydown', dismiss);
+    soundtrack?.pause();
     overlay.remove();
     isSpiderMJRunning = false;
-  }, 4100);
+  };
+  const dismiss = event => {
+    if (event.key === 'Escape') close();
+  };
+  const closeTimer = setTimeout(close, 4200);
+  document.addEventListener('keydown', dismiss);
 }
 window.triggerSpiderMJ = triggerSpiderMJ;
 
@@ -616,14 +392,15 @@ let keyBuffer = '';
 let keyTimer = null;
 window.addEventListener('keydown', (e) => {
   const targetTag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
-  if (targetTag === 'input' || targetTag === 'textarea' || e.target.isContentEditable) return;
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.isComposing ||
+    targetTag === 'input' || targetTag === 'textarea' || e.target.isContentEditable) return;
   if (e.key && e.key.length === 1) {
     keyBuffer += e.key.toLowerCase();
     clearTimeout(keyTimer);
     keyTimer = setTimeout(() => { keyBuffer = ''; }, 1200);
     if (keyBuffer.endsWith('mj')) {
       keyBuffer = '';
-      triggerSpiderMJ('按键暗号 · Smooth Criminal 🕺');
+      triggerSpiderMJ('MJ · 倒挂比心');
     }
   }
 });

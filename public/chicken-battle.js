@@ -14,10 +14,13 @@
       <circle cx="36" cy="24" r="5" fill="#fff6dc"/><circle cx="37" cy="25" r="1.25" fill="#503824" stroke="none"/>
     </g>
   </svg>`;
-  const nestArt = `<svg viewBox="0 0 126 51" aria-hidden="true">
-    <ellipse cx="63" cy="21" rx="59" ry="17" fill="#96704f"/>
-    <path d="M5 21q58 19 116 0-10 25-58 26Q15 46 5 21Z" fill="#d7ad64" stroke="#68462d" stroke-width="2"/>
-    <path d="m14 27 30 14m-18-12 34 16m-7-10 30 8m-5-11 20 7m1-13 13 7M8 20l18-6m71-2 21 7" stroke="#a47743" stroke-width="2" stroke-linecap="round"/>
+  const nestArt = `<svg class="hen-nest-art" viewBox="0 0 174 66" aria-hidden="true">
+    <ellipse cx="87" cy="59" rx="67" ry="4" fill="#63452d" opacity=".17"/>
+    <path d="M10 30q17-14 77-14t77 14l-13 13H23Z" fill="#a97a4e" stroke="#68462d" stroke-width="2"/>
+    <path d="M12 31q27-9 75-9t75 9q-11 26-75 27-63-1-75-27Z" fill="#d9ad69" stroke="#68462d" stroke-width="2"/>
+    <path d="M16 34q23 9 71 10t71-10M24 43q25 11 63 10t63-10" fill="none" stroke="#a67645" stroke-width="1.5"/>
+    <path d="m29 34 12 6m7-8 14 8m48 3 15-7m-1 11 15-7" stroke="#f4cf83" stroke-width="2" stroke-linecap="round"/>
+    <path d="M16 40 3 34m17 11-9 2m145-9 14-9m-10 13 10 1" stroke="#a67645" stroke-width="2" stroke-linecap="round"/>
   </svg>`;
   const start = () => {
     if (document.getElementById('wandering-hen')) return;
@@ -48,6 +51,12 @@
     nest.innerHTML = nestArt;
     nest.setAttribute('aria-hidden', 'true');
     nest.hidden = true;
+    const restingChicks = document.createElement('div');
+    restingChicks.className = 'hen-nest-chicks';
+    const overflowCount = document.createElement('span');
+    overflowCount.className = 'hen-nest-count';
+    overflowCount.hidden = true;
+    nest.append(restingChicks, overflowCount);
     const flock = document.createElement('div');
     flock.className = 'hen-flock';
     flock.setAttribute('aria-hidden', 'true');
@@ -69,7 +78,7 @@
     let audioContext;
 
     const edge = () => Math.max(0, innerWidth - henWidth);
-    const home = () => Math.max(0, edge() - 24);
+    const home = () => Math.max(0, Math.min(edge(), innerWidth - 170));
     const clampEgg = left => Math.max(0, Math.min(innerWidth - 48, left));
     const say = message => {
       notice.textContent = message;
@@ -120,16 +129,35 @@
       const tilt = moving ? Math.sin(now / 130) * 7 : 0;
       hen.style.left = `${x}px`;
       hen.style.transform = `scaleX(${direction}) translateY(${-hop}px) rotate(${tilt}deg)`;
-      const columns = sleeping ? 5 : Math.max(1, Math.min(10, Math.floor(innerWidth / 44) - 1));
+      if (sleeping) return;
+      const columns = Math.max(1, Math.min(10, Math.floor(innerWidth / 44) - 1));
       for (let i = 0; i < chickParts.length; i++) {
         const col = i % columns, row = Math.floor(i / columns);
         const travel = henWidth / 2 + 12 + col * 30;
-        const at = sleeping ? innerWidth - 124 + col * 18 : x + henWidth / 2 - 22 - direction * travel;
+        const at = x + henWidth / 2 - 22 - direction * travel;
         const padding = Math.max(0, innerWidth - 44);
         const wrapped = at < 0 ? Math.min(padding, -at) : at > padding ? Math.max(0, padding * 2 - at) : at;
         const bounce = moving ? Math.abs(Math.sin(now / 140 - i * .75)) * 4 : 0;
         chickParts[i].style.transform = `translate3d(${wrapped}px,${-Math.min(row * 19, 76) - bounce}px,0) scaleX(${direction})`;
       }
+    }
+    function renderNestChicks() {
+      const visible = sleeping ? Math.min(flockCount, 4) : 0;
+      while (restingChicks.childElementCount > visible) restingChicks.lastElementChild.remove();
+      while (restingChicks.childElementCount < visible) {
+        const chick = document.createElement('span');
+        chick.innerHTML = henChickArt;
+        restingChicks.append(chick);
+      }
+      const more = sleeping ? flockCount - visible : 0;
+      overflowCount.hidden = more === 0;
+      overflowCount.textContent = more > 0 ? '+' + more : '';
+    }
+    function setSleeping(value) {
+      sleeping = value;
+      hen.classList.toggle('hen-sleeping', value);
+      flock.classList.toggle('hen-sleeping', value);
+      renderNestChicks();
     }
     function setFlock(total) {
       flockCount = total;
@@ -141,6 +169,7 @@
         flock.append(chick);
         chickParts.push(chick);
       }
+      renderNestChicks();
       renderPositions();
       updateTitle();
     }
@@ -159,13 +188,11 @@
       nest.dataset.ready = 'true';
       if (firstClock || newRestTime !== restTime) {
         restTime = newRestTime;
-        sleeping = restTime && (firstClock || reduced.matches);
+        setSleeping(restTime && (firstClock || reduced.matches));
         goingHome = restTime && !sleeping;
         nest.hidden = !restTime;
         if (sleeping) x = home();
         if (!restTime && x >= home()) direction = -1;
-        hen.classList.toggle('hen-sleeping', sleeping);
-        flock.classList.toggle('hen-sleeping', sleeping);
         renderPositions();
         updateTitle();
         updateMotion();
@@ -230,7 +257,7 @@
       const left = x - 52, right = x + henWidth + 4;
       const behind = direction > 0 ? left : right;
       const beside = direction > 0 ? right : left;
-      const at = clampEgg(behind) === behind ? behind : clampEgg(beside);
+      const at = sleeping ? clampEgg(left) : clampEgg(behind) === behind ? behind : clampEgg(beside);
       egg = document.createElement('button');
       egg.type = 'button';
       egg.className = 'hen-egg';
@@ -254,9 +281,7 @@
         if (Math.abs(remaining) <= 3) {
           x = home();
           goingHome = false;
-          sleeping = true;
-          hen.classList.add('hen-sleeping');
-          flock.classList.add('hen-sleeping');
+          setSleeping(true);
           updateTitle();
         } else {
           direction = Math.sign(remaining);
@@ -279,9 +304,7 @@
       if (reduced.matches && goingHome) {
         x = home();
         goingHome = false;
-        sleeping = true;
-        hen.classList.add('hen-sleeping');
-        flock.classList.add('hen-sleeping');
+        setSleeping(true);
         renderPositions();
       }
       hen.classList.toggle('hen-paused', paused);

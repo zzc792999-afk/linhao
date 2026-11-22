@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#172b24"><meta name="description" content="25计算机1班的共享互动空间：班级相册、留言、小游戏、吉祥物、活动与班务工具。"><title>25计算机1 · 我们的主场</title><link rel="stylesheet" href="style.css?v=4.5.4"><link rel="stylesheet" href="board.css?v=4.5.0"><link rel="stylesheet" href="arcade.css?v=4.5.1"><link rel="stylesheet" href="campus.css?v=4.5.0"><link rel="stylesheet" href="chicken-battle.css?v=4.5.6"><link rel="stylesheet" href="meme-lab.css?v=4.5.0"><link rel="stylesheet" href="site-polish.css?v=4.5.0"><link rel="stylesheet" href="club.css?v=5.0.0"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#172b24"><meta name="description" content="25计算机1班的共享互动空间：班级相册、留言、小游戏、吉祥物、活动与班务工具。"><title>25计算机1 · 我们的主场</title><link rel="stylesheet" href="style.css?v=4.5.4"><link rel="stylesheet" href="board.css?v=4.5.0"><link rel="stylesheet" href="arcade.css?v=4.5.1"><link rel="stylesheet" href="campus.css?v=4.5.0"><link rel="stylesheet" href="chicken-battle.css?v=4.5.6"><link rel="stylesheet" href="meme-lab.css?v=4.5.0"><link rel="stylesheet" href="site-polish.css?v=4.5.0"><link rel="stylesheet" href="club.css?v=5.0.0"><link rel="stylesheet" href="banter.css?v=1"></head>
 <body class="club-site" data-mode="preview"><a class="hub-skip" href="#club-main">跳到主要内容</a>
 <header class="club-header" id="sticky-category-bar">
   <div class="club-header-inner">
@@ -100,7 +100,41 @@
   </div>
 </section>
 <section class="section arcade" id="arcade" aria-labelledby="arcade-title">
- <div class="arcade-heading"><div><div class="eyebrow">25 / 01 — AFTER CLASS CLUB</div><h2 id="arcade-title">课间五分钟，<br>快乐<span>有同伙。</span></h2><p>养一群班级小伙伴，拼一次手速，再猜猜同学画了什么。</p></div><div class="arcade-stamp" aria-hidden="true">PLAY<br><b>✳</b><br>TOGETHER</div></div>
+ <div class="arcade-heading"><div><div class="eyebrow">25 / 01 — AFTER CLASS CLUB</div><h2 id="arcade-title">课间五分钟，<br>快乐<span>有同伙。</span></h2><p>接一句梗，养一群小伙伴，再猜猜同学画了什么。</p></div><div class="arcade-stamp" aria-hidden="true">PLAY<br><b>✳</b><br>TOGETHER</div></div>
+ <section class="banter-game" id="banter" aria-labelledby="banter-heading">
+  <div class="banter-head">
+   <div><h3 id="banter-heading">课间接梗</h3><p>选一句接话，看看剧情能拐到哪儿。</p></div>
+   <div class="banter-caption" id="banter-day"></div>
+  </div>
+  <div class="banter-layout">
+   <article class="banter-scene" id="banter-scene" hidden>
+    <span class="banter-scene-tag" id="banter-tag"></span>
+    <h4 id="banter-scene-title"></h4>
+    <blockquote id="banter-line"></blockquote>
+   </article>
+   <div class="banter-box" id="banter-picks" hidden>
+    <h4>换你接一句</h4>
+    <div class="banter-picks" id="banter-options"></div>
+    <p class="banter-caption">每个浏览器每天投一票，答完再看全班的选择。</p>
+   </div>
+   <div class="banter-box" id="banter-result" tabindex="-1" aria-label="接梗结果" hidden>
+    <div id="banter-ending" aria-live="polite" aria-atomic="true">
+     <h4 id="banter-ending-label">我的接话</h4>
+     <p class="banter-quote" id="banter-quote"></p>
+     <p class="banter-reaction" id="banter-reaction"></p>
+    </div>
+    <div class="banter-controls">
+     <button class="banter-action" id="banter-copy" type="button">复制这一幕</button>
+     <button class="banter-action" id="banter-sync" type="button">刷新票数 ↻</button>
+    </div>
+    <textarea id="banter-share-text" rows="4" aria-label="可复制的接梗台词和链接" readonly hidden></textarea>
+    <details id="banter-practice"><summary>试拍其他接话</summary><div class="banter-picks" id="banter-other-options"></div></details>
+    <details open><summary id="banter-total">同学怎么接</summary><ul class="banter-votes" id="banter-votes"></ul></details>
+   </div>
+  </div>
+  <p class="banter-status" id="banter-status" role="status">正在等待今日场景</p>
+  <button class="banter-action" id="banter-retry" type="button" hidden>重新加载</button>
+ </section>
  <div class="arcade-topline"><div class="arcade-tabs" role="group" aria-label="选择小游戏"><button class="active" data-arcade-tab="pets" aria-pressed="true"><span aria-hidden="true">🐼</span>吉祥物小院<small>全班一起养</small></button><button data-arcade-tab="reflex" aria-pressed="false"><span aria-hidden="true">⚡</span>反应力擂台<small>来一局比手速</small></button><button data-arcade-tab="guess" aria-pressed="false"><span aria-hidden="true">🎨</span>你画我猜<small>灵魂画手集合</small></button></div><button type="button" id="arcade-refresh" class="arcade-quiet">同步新鲜事 ↻</button></div>
  <div class="arcade-profile"><label for="arcade-profile-name">游乐厅昵称<input id="arcade-profile-name" maxlength="16" placeholder="路过同学" autocomplete="nickname"></label><label for="arcade-profile-mascot">我的吉祥物头像<span id="arcade-avatar-preview" aria-hidden="true"></span><select id="arcade-profile-mascot"><option value="pig">猪</option><option value="turtle">甲鱼</option><option value="chicken">鸡</option><option value="cat">野猫</option><option value="owl">猫头鹰</option><option value="dog">狗</option><option value="panda">熊猫</option><option value="rednose">小丑先生</option><option value="hippo">河马</option><option value="horse">马</option><option value="donkeycat">驴猫</option><option value="wuba">胡巴</option><option value="triangle">三角形</option><option value="beetle">屎壳郎</option><option value="shoe">鞋子</option><option value="oil">油</option><option value="liubang">刘邦</option><option value="toe">脚趾头</option><option value="arowana">龙鱼</option><option value="squirtle">杰尼龟</option><option value="buckteeth">兔子牙</option><option value="wuliangye">五粮液</option><option value="penguin">凑企鹅</option></select></label><button id="arcade-save-profile" type="button" class="arcade-quiet">保存我的身份 ↗</button></div><p id="arcade-status" class="small-note" role="status">正在打开班级游乐厅…</p>
  <div id="arcade-pets" class="arcade-panel" data-arcade-panel="pets"><div class="pet-day-banner"><div><span class="eyebrow">OUR LITTLE CREW</span><h3>每天投喂一点，快乐长大一点。</h3><p id="pet-day-status">二十三位小伙伴，等你来打招呼 · 每10票升级变身，Lv.4解锁攻击技能！</p></div><span class="pet-food" aria-hidden="true">🥬</span></div><div id="arcade-mascots" class="arcade-mascots"></div><div class="sticker-album"><div><span class="eyebrow">MY LITTLE COLLECTION</span><h3>今天，也有一枚小小的纪念。</h3><p id="sticker-status" class="small-note">完成今日投喂，收集专属吉祥物贴纸。</p></div><div id="arcade-stickers" class="arcade-stickers"></div></div><p class="arcade-footnote">每个浏览器每天可以为每位吉祥物投喂一次，按北京时间刷新次数。成长由全班共同贡献；本浏览器的贴纸进度独立记录。</p></div>
@@ -306,4 +340,4 @@
 </section></details>
 </main>
 <footer><a class="logo" href="#home"><span class="logo-icon">&lt;/&gt;</span>25计算机1</a><p>把青春写进回忆，把未来握在手里。</p><a href="#suggestions">班级意见箱</a><a href="#class-tools">班务小工具</a><a href="/admin">管理后台</a><a href="#home">回到顶部 ↑</a></footer>
-<nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="手机底部快捷导航"><a href="#home" class="bottom-nav-item active" data-bottom-target="home"><span class="bottom-nav-icon" aria-hidden="true">⌂</span><span class="bottom-nav-label">首页</span></a><a href="#weekly" class="bottom-nav-item" data-bottom-target="weekly"><span class="bottom-nav-icon" aria-hidden="true">✎</span><span class="bottom-nav-label">手账</span></a><a href="#arcade" class="bottom-nav-item" data-bottom-target="arcade"><span class="bottom-nav-icon" aria-hidden="true">⚡</span><span class="bottom-nav-label">游乐</span></a><a href="#messages" class="bottom-nav-item" data-bottom-target="messages"><span class="bottom-nav-icon" aria-hidden="true">◌</span><span class="bottom-nav-label">留言</span></a><a href="#album" class="bottom-nav-item" data-bottom-target="album"><span class="bottom-nav-icon" aria-hidden="true">▧</span><span class="bottom-nav-label">相册</span></a></nav><button type="button" id="back-to-top-btn" class="back-to-top-btn" aria-label="返回顶部" title="返回顶部">↑</button><dialog id="lightbox"><button id="close-modal" aria-label="关闭照片">✕</button><img id="modal-img" alt=""><p id="modal-title"></p></dialog><div id="toast" role="status"></div><audio id="mj-soundtrack" src="/assets/mj-voice-v1.mp3" preload="auto" hidden></audio><script src="app.js?v=5.0.0"></script><script src="board-client.js?v=4.5.0"></script><script src="fun.js?v=5.0.0"></script><script src="social-client.js?v=4.5.0"></script><script src="arcade-client.js?v=4.5.1"></script><script src="campus-client.js?v=5.0.0"></script><script src="chicken-battle.js?v=4.5.6"></script><script src="meme-lab.js?v=5.0.0"></script><script src="site-polish.js?v=5.0.0"></script><script src="club-client.js?v=5.0.0"></script></body></html>
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="手机底部快捷导航"><a href="#home" class="bottom-nav-item active" data-bottom-target="home"><span class="bottom-nav-icon" aria-hidden="true">⌂</span><span class="bottom-nav-label">首页</span></a><a href="#weekly" class="bottom-nav-item" data-bottom-target="weekly"><span class="bottom-nav-icon" aria-hidden="true">✎</span><span class="bottom-nav-label">手账</span></a><a href="#arcade" class="bottom-nav-item" data-bottom-target="arcade"><span class="bottom-nav-icon" aria-hidden="true">⚡</span><span class="bottom-nav-label">游乐</span></a><a href="#messages" class="bottom-nav-item" data-bottom-target="messages"><span class="bottom-nav-icon" aria-hidden="true">◌</span><span class="bottom-nav-label">留言</span></a><a href="#album" class="bottom-nav-item" data-bottom-target="album"><span class="bottom-nav-icon" aria-hidden="true">▧</span><span class="bottom-nav-label">相册</span></a></nav><button type="button" id="back-to-top-btn" class="back-to-top-btn" aria-label="返回顶部" title="返回顶部">↑</button><dialog id="lightbox"><button id="close-modal" aria-label="关闭照片">✕</button><img id="modal-img" alt=""><p id="modal-title"></p></dialog><div id="toast" role="status"></div><audio id="mj-soundtrack" src="/assets/mj-voice-v1.mp3" preload="auto" hidden></audio><script src="app.js?v=5.0.1"></script><script src="board-client.js?v=4.5.0"></script><script src="fun.js?v=5.0.0"></script><script src="social-client.js?v=4.5.0"></script><script src="arcade-client.js?v=4.5.1"></script><script src="campus-client.js?v=5.0.0"></script><script src="chicken-battle.js?v=4.5.6"></script><script src="meme-lab.js?v=5.0.0"></script><script src="site-polish.js?v=5.0.1"></script><script src="club-client.js?v=5.0.0"></script><script src="banter-client.js?v=1"></script></body></html>

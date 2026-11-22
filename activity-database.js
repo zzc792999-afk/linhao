@@ -3,12 +3,14 @@ import {boardSchema,boardStore} from './board-database.js';
 import {arcadeSchema,arcadeStore} from './arcade-database.js';
 import {campusSchema,campusStore} from './campus-database.js';
 import {memeSchema,memeStore} from './meme-database.js';
+import {weeklySchema,weeklyStore} from './weekly-database.js';
 export const activitySchema=[
  ...socialSchema,
  ...boardSchema,
  ...arcadeSchema,
  ...campusSchema,
  ...memeSchema,
+ ...weeklySchema,
  'CREATE TABLE IF NOT EXISTS class_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)',
  'CREATE TABLE IF NOT EXISTS polls(id TEXT PRIMARY KEY,title TEXT NOT NULL,options TEXT NOT NULL,is_open INTEGER NOT NULL DEFAULT 1,deleted INTEGER NOT NULL DEFAULT 0,date TEXT NOT NULL)',
  'CREATE TABLE IF NOT EXISTS votes(poll TEXT NOT NULL,owner TEXT NOT NULL,choice INTEGER NOT NULL,PRIMARY KEY(poll,owner))',
@@ -31,6 +33,7 @@ export function activityStore(query){
   ...arcadeStore(query),
   ...campusStore(query),
   ...memeStore(query),
+  ...weeklyStore(query),
   setting,saveSetting,
   async fun(owner,day){
    const [polls,votes,mine,checkins,announcement,roster]=await Promise.all([
@@ -52,13 +55,16 @@ export function activityStore(query){
   async newSession(token,version,expires){await query('DELETE FROM admin_sessions WHERE expires<$1',[Date.now()]);await query('INSERT INTO admin_sessions VALUES($1,$2,$3)',[token,version,expires])},
   deleteSession:token=>query('DELETE FROM admin_sessions WHERE token=$1',[token]),
   audit:(id,action,target,date)=>query('INSERT INTO admin_audit VALUES($1,$2,$3,$4)',[id,action,target,date]),
-  async dashboard(page){
-   const [stats,notes,photos,audit]=await Promise.all([
+  async dashboard(page, search=''){
+   const pattern='%'+search.toLowerCase().replace(/[!%_]/g,char=>'!'+char)+'%';
+   const where="LOWER(name || ' ' || text) LIKE $1 ESCAPE '!'";
+   const [stats,notes,photos,audit,matched]=await Promise.all([
     rows('SELECT (SELECT COUNT(*) FROM notes) AS notes,(SELECT COUNT(*) FROM photos) AS photos,(SELECT COUNT(*) FROM likes) AS likes,(SELECT COUNT(*) FROM checkins) AS checkins'),
-    rows('SELECT id,name,text,date FROM notes ORDER BY date DESC,id DESC LIMIT 50 OFFSET $1',[page*50]),
+    rows('SELECT id,name,text,date FROM notes WHERE '+where+' ORDER BY date DESC,id DESC LIMIT 50 OFFSET $2',[pattern,page*50]),
     rows('SELECT id,name,date FROM photos ORDER BY date DESC,id DESC'),
-    rows('SELECT action,target,date FROM admin_audit ORDER BY date DESC LIMIT 30')]);
-   return {stats:Object.fromEntries(Object.entries(stats[0]).map(([k,v])=>[k,Number(v)])),notes,photos,audit,page};
+    rows('SELECT action,target,date FROM admin_audit ORDER BY date DESC LIMIT 30'),
+    rows('SELECT COUNT(*) AS count FROM notes WHERE '+where,[pattern])]);
+   return {stats:Object.fromEntries(Object.entries(stats[0]).map(([k,v])=>[k,Number(v)])),notes,photos,audit,page,matchedNotes:Number(matched[0].count)};
   },
   adminDeleteNote:id=>query('DELETE FROM notes WHERE id=$1',[id]),
   adminDeletePhoto:id=>query('DELETE FROM photos WHERE id=$1',[id]),

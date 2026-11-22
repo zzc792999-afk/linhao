@@ -117,160 +117,94 @@ if(preview){
   for(const event of ['pointerdown','keydown','scroll'])window.addEventListener(event,()=>{const paused=Date.now()-lastActivity>=120000;lastActivity=Date.now();if(paused)refresh()},{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){lastActivity=Date.now();refresh()}});
 }
-function openPublicSection(hash){
-  if(!hash)return;
-  const rawId=hash.replace(/^#/,'');
-  const foldMap={'album':'album-fold','messages':'messages-fold','class-tools':'class-tools','class-hub':'class-tools','class-board':'class-tools'};
-  const targetFoldId=foldMap[rawId];
-  if(targetFoldId){
-    const f=document.getElementById(targetFoldId);
-    if(f)f.open=true;
-  }
-  const el=document.getElementById(rawId);
-  if(el){
-    const d=el.closest('details');
-    if(d)d.open=true;
-  }
-}
-openPublicSection(location.hash);
-window.addEventListener('hashchange',()=>openPublicSection(location.hash));
-
+const quietScroll = matchMedia('(prefers-reduced-motion: reduce)');
 let isNavigating = false;
-let navTimer = null;
-
-function navigateToHash(href) {
-  if (!href || href === '#' || href === '#0') return;
-  const targetId = href.replace(/^#/, '');
-  openPublicSection(href);
-
-  const target = document.getElementById(targetId) || document.querySelector(href);
-  if (!target) return;
-
+let navTimer;
+function openPublicSection(hash) {
+  let id;
+  try { id = decodeURIComponent(hash.slice(1)); } catch { return null; }
+  const target = document.getElementById(id);
+  if (!target) return null;
+  const folds = {'album':'album-fold','messages':'messages-fold'};
+  const inner = document.getElementById(folds[id] || '');
+  if (inner) inner.open = true;
+  for (let node = target; node; node = node.parentElement) {
+    if (node instanceof HTMLDetailsElement) node.open = true;
+  }
+  return target;
+}
+function navigateToHash(href, options = {}) {
+  const target = openPublicSection(href);
+  if (!target) return false;
+  if (options.write !== false && location.hash !== href) history.pushState(null,'',href);
   isNavigating = true;
   clearTimeout(navTimer);
-  navTimer = setTimeout(() => { isNavigating = false; }, 900);
-
-  if (window.updateActiveNav) {
-    window.updateActiveNav(targetId);
-  }
-
-  const doScroll = () => {
-    const navBar = document.getElementById('sticky-category-bar');
-    const offset = navBar ? (navBar.offsetHeight + 10) : 55;
-    const targetTop = target.getBoundingClientRect().top + window.scrollY - offset;
-
-    window.scrollTo({
-      top: Math.max(0, targetTop),
-      behavior: 'smooth'
-    });
-
-    if (history.replaceState) {
-      history.replaceState(null, '', href);
-    }
-  };
-
+  navTimer = setTimeout(() => { isNavigating = false; }, 600);
+  window.updateActiveNav?.(target.id);
   requestAnimationFrame(() => {
-    setTimeout(doScroll, 20);
+    if (options.focus) {
+      const focusTarget = target.querySelector(':scope > summary') || target;
+      if (!focusTarget.matches('summary,[tabindex]')) focusTarget.tabIndex = -1;
+      focusTarget.focus({preventScroll:true});
+    }
+    const navHeight = document.getElementById('sticky-category-bar')?.offsetHeight || 56;
+    const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 9;
+    window.scrollTo({top:Math.max(0,top),behavior:options.instant || quietScroll.matches ? 'instant' : 'smooth'});
   });
+  return true;
 }
-
-// User manual touch/wheel immediately unlocks navigation lock
-window.addEventListener('touchstart', () => { isNavigating = false; }, { passive: true });
-window.addEventListener('wheel', () => { isNavigating = false; }, { passive: true });
-
-document.addEventListener('click', event => {
+function followNavigation() {
+  if (location.hash) navigateToHash(location.hash,{write:false,instant:true});
+  else window.updateActiveNav?.('home');
+}
+for (const event of ['hashchange','popstate']) window.addEventListener(event,followNavigation);
+for (const event of ['touchstart','wheel']) window.addEventListener(event,() => {isNavigating=false},{passive:true});
+document.addEventListener('click',event => {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   const link = event.target.closest('a[href^="#"]');
-  if (!link) return;
-  const href = link.getAttribute('href');
-  if (!href || href === '#' || href === '#0') return;
-  event.preventDefault();
-  navigateToHash(href);
+  if (link && navigateToHash(link.getAttribute('href'),{focus:event.detail===0})) event.preventDefault();
 });
 
 const backToTopBtn = document.getElementById('back-to-top-btn');
 if (backToTopBtn) {
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 250) backToTopBtn.classList.add('visible');
-    else backToTopBtn.classList.remove('visible');
-  }, { passive: true });
-  backToTopBtn.addEventListener('click', () => {
-    isNavigating = true;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => { isNavigating = false; }, 600);
-  });
+  window.addEventListener('scroll',()=>{
+    backToTopBtn.classList.toggle('visible',window.scrollY > 250);
+  },{passive:true});
+  backToTopBtn.addEventListener('click',()=>navigateToHash('#home'));
 }
 
-(function initNavScrollSpy() {
-  const sectionIds = [
-    'home', 'mobile-portals', 'arcade', 'people', 'mascots',
-    'album', 'messages', 'class-film', 'playground',
-    'social-area', 'teachers', 'targets', 'suggestions', 'class-tools'
-  ];
-  const sections = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
-  if (!sections.length || !('IntersectionObserver' in window)) return;
-
-  const categoryPills = document.querySelectorAll('.category-pill[data-nav-target]');
-  const bottomNavItems = document.querySelectorAll('.bottom-nav-item[data-bottom-target]');
-  const track = document.getElementById('category-scroll-track');
-
-  window.updateActiveNav = function(activeId) {
-    if (!activeId) return;
-    const targetKey = activeId === 'mobile-portals' ? 'home' : activeId;
-
-    categoryPills.forEach(pill => {
-      const match = pill.dataset.navTarget === targetKey;
-      pill.classList.toggle('active', match);
-      if (match && track) {
-        // ONLY scroll track horizontally if pill is outside the visible track!
-        // NEVER call pill.scrollIntoView() which scrolls the whole window!
-        const pillLeft = pill.offsetLeft;
-        const pillRight = pillLeft + pill.offsetWidth;
-        const sLeft = track.scrollLeft;
-        const cWidth = track.clientWidth;
-        if (pillLeft < sLeft + 15 || pillRight > sLeft + cWidth - 15) {
-          track.scrollTo({
-            left: Math.max(0, pillLeft - (cWidth / 2) + (pill.offsetWidth / 2)),
-            behavior: 'smooth'
-          });
-        }
-      }
-    });
-
-    const bottomMap = {
-      'home': 'home',
-      'mobile-portals': 'home',
-      'people': 'home',
-      'messages': 'square',
-      'social-area': 'square',
-      'playground': 'meme-lab',
-      'arcade': 'arcade',
-      'mascots': 'arcade',
-      'targets': 'arcade',
-      'album': 'album',
-      'class-film': 'album',
-      'teachers': 'my-space',
-      'suggestions': 'my-space',
-      'class-tools': 'my-space'
-    };
-    const bottomKey = bottomMap[activeId] || '';
-    if (bottomKey) {
-      bottomNavItems.forEach(item => {
-        item.classList.toggle('active', item.dataset.bottomTarget === bottomKey);
-      });
+(function initNavScrollSpy(){
+  const sections = ['home','weekly','arcade','messages','album','club-extra','club-collection',
+    'club-studio','club-memory','club-archive','suggestions','class-tools'].map(id=>document.getElementById(id)).filter(Boolean);
+  const links = [...document.querySelectorAll('[data-nav-target],[data-bottom-target]')];
+  const alias = {'mobile-portals':'home','club-main':'home','reaction-pad':'arcade','guess-wall':'arcade',
+    'club-collection':'club-extra','people':'club-extra','mascots':'club-extra','class-film':'club-extra',
+    'club-studio':'club-extra','playground':'club-extra','club-memory':'club-extra','social-area':'club-extra',
+    'club-archive':'club-extra','teachers':'club-extra','targets':'club-extra','suggestions':'club-extra',
+    'class-tools':'club-extra','class-hub':'club-extra','class-board':'club-extra'};
+  window.updateActiveNav = id => {
+    const key = alias[id] || id;
+    for (const link of links) {
+      const active = (link.dataset.navTarget || link.dataset.bottomTarget) === key;
+      link.classList.toggle('active',active);
+      if (active) link.setAttribute('aria-current','location');
+      else link.removeAttribute('aria-current');
     }
   };
-
-  const observer = new IntersectionObserver((entries) => {
-    if (isNavigating) return;
-    const visible = entries.filter(e => e.isIntersecting);
-    if (!visible.length) return;
-    // Pick the entry closest to top of viewport
-    visible.sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
-    window.updateActiveNav(visible[0].target.id);
-  }, { rootMargin: '-10% 0px -65% 0px', threshold: 0 });
-
-  sections.forEach(sec => observer.observe(sec));
+  if (!('IntersectionObserver' in window)) return;
+  const visible = new Set();
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) visible.add(entry.target);
+      else visible.delete(entry.target);
+    }
+    if (isNavigating || !visible.size) return;
+    const nearest = [...visible].sort((a,b)=>Math.abs(a.getBoundingClientRect().top)-Math.abs(b.getBoundingClientRect().top))[0];
+    window.updateActiveNav(nearest.id);
+  },{rootMargin:'-15% 0px -63% 0px',threshold:0});
+  sections.forEach(section=>observer.observe(section));
 })();
+followNavigation();
 
 
 // The MJ easter egg uses the short audio excerpt from the reference recording.

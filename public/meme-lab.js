@@ -17,54 +17,6 @@
   let dragStartX = 0, dragStartY = 0;
   let initialLayerState = null;
 
-  // 发疯文学语料库
-  const crazyQuotes = {
-    programmer: [
-      '代码怎么又红了！谁写的这个Bug？！哦是我写的，那没事了，接着写下一个Bug！',
-      '重构！我今天必须把这三千行屎山代码重构！等等……怎么删了三行连登录都进不去了？！',
-      '我没疯！我只是在跟编译器对齐心智模型！NullPointerException 它难道就没有错吗？！',
-      '运行无报错，但是功能完全不对！这难道就是传说中的量子力学编程？！',
-      '只要我不看控制台，我的代码就永远没有报错！'
-    ],
-    morning: [
-      '早八！为什么这个星球上会存在早八这种东西！我与早八不共戴天！',
-      '闹钟响了十六次，我醒了，但我的灵魂还在枕头上做高数卷子！',
-      '早八第一节课：我是谁？我在哪？黑板上写的是甲骨文还是线性代数？！',
-      '别叫我起床，我正在梦里拯救世界，顺便把上午的课给退了！',
-      '走进教室的那一刻，我突然觉得床是我这辈子唯一的挚爱。'
-    ],
-    exam: [
-      '高数看我像在看猴，我看高数像在看外星文明遗迹！',
-      '全部退后！期末周到了，我要开始无差别相信所有的考场玄学了！',
-      '书翻了一页又一页，知识从左脑流进右脑，再从天灵盖蒸发！',
-      '遇事不决选 C，三长一短选最短，三短一长选最长，参差不齐全蒙 B！',
-      '老师！您给的重点是整本书目录吗？！救救孩子，给个60分孩子给您磕头了！'
-    ],
-    abstract: [
-      '尊重、理解、祝福、锁死、并在班级群里疯狂发狗头！',
-      '你说的对，但25计算机1班是一款全班一起养14位吉祥物的开放世界冒险游戏！',
-      '人生就像一盘散沙，不用风吹，写两行代码就自己崩塌了。',
-      '我的精神状态良好，不仅能在机房做仰卧起坐，还能用汇编语言唱rap！',
-      '已老实，求放过，下次还敢！'
-    ]
-  };
-
-  // 人话翻译器字典
-  const jargonDict = [
-    { jargon: '对齐颗粒度', human: '商量一下细节，别各搞各的' },
-    { jargon: '赋能', human: '帮忙 / 提供点工具' },
-    { jargon: '闭环', human: '做完它，别烂尾' },
-    { jargon: '底层逻辑', human: '最根本的原因' },
-    { jargon: '组合拳', human: '一起上多个招数' },
-    { jargon: '抓手', human: '切入点 / 具体办法' },
-    { jargon: '心智', human: '习惯和想法' },
-    { jargon: '痛点', human: '让人特别难受的问题' },
-    { jargon: '降维打击', human: '碾压 / 彻底完胜' },
-    { jargon: '复盘', human: '总结反思为什么搞砸了' },
-    { jargon: '打法', human: '做事的方法' },
-    { jargon: '延迟满足', human: '先吃苦，以后再说' }
-  ];
-
   // --------------------------------------------------------------------------
   // 1. Canvas 核心引擎
   // --------------------------------------------------------------------------
@@ -690,116 +642,13 @@
   }
 
   // --------------------------------------------------------------------------
-  // 3. 发疯文学逻辑
-  // --------------------------------------------------------------------------
-  let currentCat = 'programmer';
-  function initCrazySection() {
-    const quoteEl = document.getElementById('crazy-quote-text');
-    const randomBtn = document.getElementById('crazy-random-btn');
-    const copyBtn = document.getElementById('crazy-copy-btn');
-    const applyMemeBtn = document.getElementById('crazy-apply-meme-btn');
-    const catPills = document.querySelectorAll('.crazy-cat-pill');
-
-    function getRandomQuote() {
-      const list = crazyQuotes[currentCat] || crazyQuotes.programmer;
-      return list[Math.floor(Math.random() * list.length)];
-    }
-
-    if (randomBtn && quoteEl) {
-      randomBtn.addEventListener('click', () => {
-        quoteEl.style.opacity = '0';
-        setTimeout(() => {
-          quoteEl.textContent = getRandomQuote();
-          quoteEl.style.opacity = '1';
-        }, 120);
-      });
-    }
-
-    if (copyBtn && quoteEl) {
-      copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(quoteEl.textContent).then(() => {
-          toast('发疯语录已复制到剪贴板！');
-        }).catch(() => toast('复制失败'));
-      });
-    }
-
-    if (applyMemeBtn && quoteEl) {
-      applyMemeBtn.addEventListener('click', () => {
-        addTextLayer(quoteEl.textContent.slice(0, 30));
-        switchMemeTab('studio');
-        toast('已填入梗图画布！');
-      });
-    }
-
-    catPills.forEach(pill => {
-      pill.addEventListener('click', () => {
-        catPills.forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
-        currentCat = pill.dataset.cat;
-        if (quoteEl) quoteEl.textContent = getRandomQuote();
-      });
-    });
-  }
-
-  // --------------------------------------------------------------------------
-  // 4. 人话翻译器逻辑
-  // --------------------------------------------------------------------------
-  function initTranslator() {
-    const inputArea = document.getElementById('trans-input');
-    const outputArea = document.getElementById('trans-output');
-    const swapBtn = document.getElementById('trans-swap-btn');
-    const modeBadge = document.getElementById('trans-mode-badge');
-    const chips = document.querySelectorAll('.trans-chip');
-    let mode = 'toHuman'; // 'toHuman' | 'toJargon'
-
-    function translate() {
-      if (!inputArea || !outputArea) return;
-      let text = inputArea.value.trim();
-      if (!text) {
-        outputArea.textContent = '翻译结果将显示在这里…';
-        return;
-      }
-
-      if (mode === 'toHuman') {
-        jargonDict.forEach(item => {
-          text = text.replaceAll(item.jargon, `【${item.human}】`);
-        });
-        outputArea.textContent = text;
-      } else {
-        jargonDict.forEach(item => {
-          text = text.replaceAll(item.human, `【${item.jargon}】`);
-        });
-        outputArea.textContent = text;
-      }
-    }
-
-    if (inputArea) inputArea.addEventListener('input', translate);
-
-    if (swapBtn && modeBadge) {
-      swapBtn.addEventListener('click', () => {
-        mode = mode === 'toHuman' ? 'toJargon' : 'toHuman';
-        modeBadge.textContent = mode === 'toHuman' ? '大厂黑话 ➔ 大白话' : '大白话 ➔ 互联网黑话';
-        translate();
-      });
-    }
-
-    chips.forEach(c => {
-      c.addEventListener('click', () => {
-        if (inputArea) {
-          inputArea.value = c.textContent;
-          translate();
-        }
-      });
-    });
-  }
-
-  // --------------------------------------------------------------------------
   // 5. 标签切换
   // --------------------------------------------------------------------------
   function switchMemeTab(tabKey) {
     $$('.meme-tab-btn').forEach(btn => {
       const active = btn.dataset.tab === tabKey;
       btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
     });
     $$('.meme-tab-panel').forEach(panel => {
       panel.classList.toggle('active', panel.id === `meme-panel-${tabKey}`);
@@ -823,8 +672,6 @@
     if (window.ResizeObserver && container) {
       new ResizeObserver(() => fitCanvasContainer()).observe(container);
     }
-    initCrazySection();
-    initTranslator();
 
     // 绑定标签切换
     $$('.meme-tab-btn').forEach(btn => {
@@ -915,7 +762,6 @@
       reader.readAsDataURL(file);
     });
 
-    loadMemesGallery();
   }
 
   if (document.readyState === 'loading') {

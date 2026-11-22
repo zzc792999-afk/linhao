@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import {boardInput} from './board.js';
 import {arcadeAdminRoutes} from './arcade.js';
 import {campusAdminRoutes} from './campus.js';
+import {weeklyAdminRoutes} from './weekly.js';
 
 const scrypt=promisify(rawScrypt);
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -17,6 +18,7 @@ export const classDay=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shangh
 export function adminRoutes(db,readJson){
  const arcadeAdmin=arcadeAdminRoutes(db);
  const campusAdmin=campusAdminRoutes(db,readJson);
+ const weeklyAdmin=weeklyAdminRoutes(db,readJson);
  const attempts=new Map();let globalAttempts={start:Date.now(),count:0};
  const cookie=(res,value,maxAge)=>res.appendHeader('Set-Cookie',`class_admin=${value}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${process.env.NODE_ENV==='production'?'; Secure':''}`);
 
@@ -42,6 +44,7 @@ export function adminRoutes(db,readJson){
   if(await arcadeAdmin(req,res,url,owner,send))return true;
   if(await campusAdmin(req,res,url,owner,send))return true;
   const audit=async(action,target='')=>db.audit(randomBytes(16).toString('hex'),action,target,new Date().toISOString());
+  if(await weeklyAdmin(req,res,url,send,audit))return true;
   if(url.pathname==='/api/admin/board'&&req.method==='GET'){send(200,{items:await db.board(owner,true)});return true}
   const boardTarget=/^\/api\/admin\/board\/([a-f0-9]{32})$/.exec(url.pathname);
   if(url.pathname==='/api/admin/board'&&req.method==='POST'){
@@ -67,8 +70,9 @@ export function adminRoutes(db,readJson){
   }
   if(url.pathname==='/api/admin/dashboard'&&req.method==='GET'){
    const page=Math.min(100000,Math.max(0,Number.parseInt(url.searchParams.get('page')||'0',10)||0));
+   const query=(url.searchParams.get('q')||'').trim().slice(0,80);
    const [dash, fun, ext, chEntries, marquee, teachers, reviews, targets, suggestions, people] = await Promise.all([
-     db.dashboard(page),
+     db.dashboard(page,query),
      db.fun(owner,classDay()),
      db.extended(owner,new Date().toISOString(),true),
      db.challengeEntries(),

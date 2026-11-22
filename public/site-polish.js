@@ -2,12 +2,12 @@
 (() => {
   const destinations = [
     ['🏠','班级首页','看看今天的新鲜事','#home','首页 今日 动态'],
+    ['✎','本周班级手账','参与每周一题，回看往期回答','#weekly','每周 话题 投稿 周报 记录 往期'],
     ['💬','留言墙','给全班留一句话','#messages','广场 留言 聊天'],
     ['📸','班级相册','上传和查看共享照片','#album','照片 图片 上传'],
     ['🎮','游戏中心','吉祥物、反应力和你画我猜','#arcade','游乐厅 游戏 投喂 画画'],
-    ['🧪','抽象研究所','课间整活和班级梗','#playground','研究所 梗 投稿 投票'],
-    ['🎯','解压靶场','选道具，轻松扔一局','#targets','靶子 鸡蛋 拖鞋 番茄'],
-    ['👨‍🏫','匿名评教','查看和分享课程体验','#teachers','老师 评价 评分'],
+    ['🧪','班级梗图工作室','创作和浏览同学的梗图','#playground','研究所 梗 投稿 投票'],
+    ['⋯','更多班级空间','人物、图鉴、作品与旧版互动','#club-extra','老师 评教 靶场 更多 旧版'],
     ['📮','意见箱','向班委提交建议','#suggestions','建议 反馈 bug 悄悄话'],
     ['🐾','吉祥物小院','看看二十三位班级伙伴','#mascots','动物 投喂 小丑先生 鸡 五粮液 凑企鹅'],
     ['🎬','班级影像','播放我们的班级视频','#class-film','视频 电影 回忆'],
@@ -16,7 +16,9 @@
   ];
   const normalize = value => value.toLowerCase().replace(/\s+/g,'');
   const openTarget = href => {
-    const target = document.querySelector(href);
+    let id;
+    try { id = decodeURIComponent(href.replace(/^#/,'')); } catch { return; }
+    const target = document.getElementById(id);
     if (!target) return;
     if (target.matches('details')) target.open = true;
     target.closest('details')?.setAttribute('open','');
@@ -45,7 +47,11 @@
   const input = dialog.querySelector('input');
   const results = dialog.querySelector('.site-finder-results');
   const close = () => dialog.close();
-  const go = href => { openTarget(href); close(); location.hash = href; };
+  const go = href => {
+    openTarget(href); close();
+    if (typeof window.navigateToHash === 'function') window.navigateToHash(href,{focus:true});
+    else { location.hash = href; document.getElementById(href.slice(1))?.scrollIntoView(); }
+  };
   const render = query => {
     const term = normalize(query);
     const found = destinations.filter(item => normalize(item.join(' ')).includes(term));
@@ -56,7 +62,7 @@
     found.forEach(([icon,label,description,href]) => {
       const link = document.createElement('a'); link.href=href; link.className='site-finder-item';
       link.innerHTML=`<span class="site-finder-icon" aria-hidden="true">${icon}</span><span class="site-finder-copy"><strong>${label}</strong><small>${description}</small></span><span class="site-finder-arrow" aria-hidden="true">↗</span>`;
-      link.addEventListener('click', event => { event.preventDefault(); go(href); });
+      link.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); go(href); });
       results.append(link);
     });
   };

@@ -49,41 +49,6 @@
   }
 
   // ==========================================================================
-  // 1. 网站滚动墙 (Marquee Ticker)
-  // ==========================================================================
-  async function initMarquee() {
-    const track = $('#campus-ticker-track');
-    if (!track) return;
-
-    try {
-      const data = await api('/marquee');
-      const messages = data.messages || [];
-      if (!messages.length) {
-        messages.push({
-          id: 'def-1',
-          badge: '广播',
-          author: '25计算机1',
-          text: '青春同行，代码同窗 · 欢迎来到 25计算机1 班级互动小站！'
-        });
-      }
-
-      // 循环双倍渲染以保证 CSS 跑马灯平滑无缝衔接
-      const itemsToRender = [...messages, ...messages];
-      track.replaceChildren(...itemsToRender.map(m => {
-        const item = el('div', undefined, 'campus-ticker-item');
-        const badge = el('span', m.badge || '广播', 'campus-ticker-badge');
-        const text = el('span', m.text, 'campus-ticker-text');
-        const author = el('span', '— ' + (m.author || '班委'), 'campus-ticker-author');
-        const sep = el('span', '✳', 'campus-ticker-sep');
-        item.append(badge, text, author, sep);
-        return item;
-      }));
-    } catch {
-      // 容错保持现有静态展示
-    }
-  }
-
-  // ==========================================================================
   // 2. 老师匿名评价基地 (Teachers Base & Anonymous Reviews)
   // ==========================================================================
   let currentTeacherId = null;
@@ -826,13 +791,31 @@
   // 初始化与监听
   // ==========================================================================
   function init() {
-    initMarquee();
-    loadTeachers();
     setupTeacherForm();
-    loadTargets();
     setupTargetArena();
-    loadSuggestions();
     setupSuggestionForm();
+
+    const archive = $('#club-archive');
+    const loadArchive = () => {
+      if (archive && !archive.open) return;
+      loadTeachers();
+      loadTargets();
+    };
+    archive?.addEventListener('toggle',loadArchive);
+    loadArchive();
+
+    const suggestionsSection = $('#suggestions');
+    if (suggestionsSection && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+          observer.disconnect();
+          loadSuggestions();
+        }
+      },{rootMargin:'220px'});
+      observer.observe(suggestionsSection);
+    } else {
+      loadSuggestions();
+    }
   }
 
   if (document.readyState === 'loading') {

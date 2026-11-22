@@ -4,7 +4,6 @@ import {arcadeRoutes} from './arcade.js';
 import {campusRoutes} from './campus.js';
 import {memeRoutes} from './meme.js';
 import {weeklyRoutes} from './weekly.js';
-import {banterRoutes} from './banter.js';
 import {solsticeRoutes, isSolsticeExpired, cleanupSolsticeFiles} from './solstice.js';
 import {adminRoutes,classDay} from './admin.js';
 import http from 'node:http';
@@ -28,7 +27,6 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
   const campus=campusRoutes(db,req=>readJson(req,180000));
   const meme=memeRoutes(db,req=>readJson(req,4*1024*1024));
   const weekly=weeklyRoutes(db,req=>readJson(req,4096));
-  const banter=banterRoutes(db,req=>readJson(req,2048));
   const solstice=solsticeRoutes(db,req=>readJson(req,16384),publicRoot);
   const rates = new Map();
   let processingPhotos=0;
@@ -63,7 +61,7 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
         const allowedPages = ['index.html','admin.html','dongzhi.html','dongzhi.css','dongzhi.js','admin-client.js','board-client.js','board-admin.js','board.css','arcade-client.js','arcade-admin.js','arcade.css','social-client.js','social-admin.js','campus-client.js','campus-admin.js','campus.css','chicken-battle.css','chicken-battle.js','meme-lab.css','meme-lab.js','site-polish.css','site-polish.js','fun.js','app.js','style.css'];
         allowedPages.push('2e3e59b8e9a904ddb6936dec7a10a6d3.txt');
         allowedPages.push('club.css','club-client.js','club-admin.js');
-        allowedPages.push('banter.css','banter-client.js');
+        allowedPages.push('hen-show.css','hen-show.js');
         if (!isAllowedAsset && !allowedPages.includes(relative)) return send(404,{error:'页面不存在'});
         let content;
         try {
@@ -115,7 +113,6 @@ export async function createApp(dataDir = process.env.DATA_DIR || path.join(root
       if(await campus(req,res,url,owner,send))return;
       if(await meme(req,res,url,owner,send))return;
       if(await weekly(req,res,url,owner,send))return;
-      if(await banter(req,res,url,owner,send))return;
       if(await solstice(req,res,url,owner,send))return;
       if(req.method==='GET'&&url.pathname==='/api/fun')return send(200,await db.fun(owner,classDay()));
       if(req.method==='PUT'&&url.pathname==='/api/checkin'){

@@ -177,7 +177,7 @@ if (backToTopBtn) {
   const sections = ['home','weekly','arcade','messages','album','club-extra','club-collection',
     'club-studio','club-memory','club-archive','suggestions','class-tools'].map(id=>document.getElementById(id)).filter(Boolean);
   const links = [...document.querySelectorAll('[data-nav-target],[data-bottom-target]')];
-  const alias = {'mobile-portals':'home','club-main':'home','banter':'arcade','reaction-pad':'arcade','guess-wall':'arcade',
+  const alias = {'mobile-portals':'home','club-main':'home','banter':'arcade','hen-show':'arcade','reaction-pad':'arcade','guess-wall':'arcade',
     'club-collection':'club-extra','people':'club-extra','mascots':'club-extra','class-film':'club-extra',
     'club-studio':'club-extra','playground':'club-extra','club-memory':'club-extra','social-area':'club-extra',
     'club-archive':'club-extra','teachers':'club-extra','targets':'club-extra','suggestions':'club-extra',

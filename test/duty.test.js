@@ -71,6 +71,33 @@ for(const backend of ['SQLite','PostgreSQL']){
       assert.deepEqual(state.groups,updated.groups);
       assert.equal(state.requests[0].status,'rejected');
       assert.equal('owner' in state.requests[0],false);
+
+      const pair=state.groups[8];
+      const splitPayload={kind:'split',from:{position:[8,1],name:pair[1],members:pair},reason:'两人改为单人值日'};
+      const split=await applicant(route,'POST',splitPayload);
+      assert.equal(split.status,201);
+      assert.equal(split.data.kind,'split');
+      assert.equal(split.data.to,null);
+      assert.equal((await other(route,'POST',{...splitPayload,from:{position:[8,0],name:pair[0],members:pair}})).status,409);
+      assert.deepEqual((await other('/duty')).data.groups,state.groups);
+      assert.equal((await admin('/admin/duty/'+split.data.id,'PUT',approval)).status,200);
+      const splitGroups=(await other('/duty')).data.groups;
+      assert.deepEqual(splitGroups[8],[pair[0]]);
+      assert.deepEqual(splitGroups.at(-1),[pair[1]]);
+      assert.equal(splitGroups.filter(group=>group.length===1).length,10);
+      assert.equal(splitGroups.filter(group=>group.length===2).length,16);
+      assert.deepEqual(splitGroups.flat().sort(),groups.flat().sort());
+
+      const people='/admin/duty/people';
+      assert.equal((await applicant(people,'POST',{name:'新同学一'})).status,401);
+      assert.equal((await admin(people,'POST',{name:'新同学一'})).status,201);
+      assert.equal((await admin(people,'POST',{name:'新同学一'})).status,409);
+      const added=await admin(people,'POST',{name:'新同学二',partner:{position:[8,0],name:pair[0]}});
+      assert.equal(added.status,201);
+      assert.deepEqual(added.data.groups[8],[pair[0],'新同学二']);
+      assert.deepEqual(added.data.groups.at(-1),['新同学一']);
+      assert.equal((await admin(people,'POST',{name:'新同学三',partner:{position:[8,0],name:pair[0]}})).status,409);
+      assert.deepEqual((await other('/duty')).data.groups,added.data.groups);
     }finally{
       server?.closeAllConnections();
       if(server)await new Promise(resolve=>server.close(resolve));

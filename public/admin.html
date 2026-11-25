@@ -95,6 +95,17 @@
  <div class="fold-body">
   <div class="duty-section-head"><a href="/duty.html" target="_blank" rel="noopener">查看正式值日表 ↗</a><button id="duty-admin-refresh" type="button" class="club-quiet">刷新申请</button></div>
   <p id="duty-admin-status" class="duty-status" role="status"></p>
+  <details>
+   <summary>新增同学</summary>
+   <form id="duty-add-form">
+    <fieldset id="duty-add-fields" disabled>
+     <label for="duty-add-name">姓名</label><input id="duty-add-name" maxlength="30" required>
+     <label for="duty-add-partner">值日方式</label>
+     <select id="duty-add-partner"><option value="">新建单人组</option></select>
+     <div class="duty-actions"><button class="club-primary" type="submit">新增到值日表</button></div>
+    </fieldset>
+   </form>
+  </details>
   <h3>待审批</h3><div id="duty-admin-list"></div>
   <details><summary>审批记录</summary><div id="duty-admin-history"></div></details>
  </div>
@@ -121,4 +132,4 @@
 .mascot-admin-card-action { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
 .mascot-admin-card input { margin: 0; padding: 8px 10px; font-size: 13px; font-family: monospace; }
 </style>
-</div></main><script src="/social-client.js"></script><script src="/social-admin.js"></script><script src="/board-admin.js?v=4.0"></script><script src="/arcade-admin.js?v=4.5.1"></script><script src="/admin-client.js?v=5.0.0"></script><script src="/campus-admin.js?v=4.3.5"></script><script src="/club-admin.js?v=5.0.0"></script><script src="/duty-client.js?v=1"></script></body></html>
+</div></main><script src="/social-client.js"></script><script src="/social-admin.js"></script><script src="/board-admin.js?v=4.0"></script><script src="/arcade-admin.js?v=4.5.1"></script><script src="/admin-client.js?v=5.0.0"></script><script src="/campus-admin.js?v=4.3.5"></script><script src="/club-admin.js?v=5.0.0"></script><script src="/duty-client.js?v=2"></script></body></html>

@@ -9,14 +9,18 @@ const initialGroups = [
 ];
 
 const key = 'class_duty_v1';
-const validPosition = value => Array.isArray(value) && value.length === 2 && value.every(Number.isInteger) &&
-  Boolean(initialGroups[value[0]]?.[value[1]]);
+const validPosition = (groups,value) => Array.isArray(value) && value.length === 2 && value.every(Number.isInteger) &&
+  Boolean(groups[value[0]]?.[value[1]]);
 const publicRequest = ({owner,...request}) => request;
-const unchanged = (groups, sides) => sides.every(({position,members}) =>
-  groups[position[0]].every((name,index)=>name===members[index]));
+const unchanged = (groups, sides) => sides.every(({position,members})=>{
+  const current=groups[position[0]];
+  return current?.length===members.length && current.every((name,index)=>name===members[index]);
+});
 const descriptor = (groups,position) => {
   const members = [...groups[position[0]]];
-  return {position,members,name:members[position[1]]};
+  const number=groups.slice(0,position[0]+1).filter(group=>group.length===members.length).length;
+  const label=(members.length===1?'单人':'双人')+'第 '+number+' 组';
+  return {position,members,label,name:members[position[1]]};
 };
 const fail = (status,error) => ({status,data:{error}});
 const ok = (data,status=200) => ({status,data});
@@ -48,22 +52,51 @@ export function dutyRoutes(db, readJson, admin=false) {
       const visible=admin ? requests : requests.filter(request=>request.owner===owner);
       result=ok({groups,requests:visible.map(publicRequest)});
     }else if(!admin && path===base+'/requests' && req.method==='POST'){
-      const {from,to,reason}=await readJson(req);
-      if(!validPosition(from?.position) || !validPosition(to?.position) ||
-         from.position[0]===to.position[0] || typeof reason!=='string' || reason.trim().length<2 || reason.trim().length>200 ||
-         typeof from.name!=='string' || typeof to.name!=='string'){
-        result=fail(400,'请选择两个不同组的同学，并填写 2–200 字申请理由');
+      const {kind='swap',from,to,reason}=await readJson(req);
+      if(!['swap','split'].includes(kind) || typeof reason!=='string' || reason.trim().length<2 || reason.trim().length>200 ||
+         typeof from?.name!=='string' || (kind==='swap' && typeof to?.name!=='string')){
+        result=fail(400,'请选择申请类型和值日位置，并填写 2–200 字申请理由');
       }else{
         result=await change(db,({groups,requests})=>{
-          const source=descriptor(groups,from.position), target=descriptor(groups,to.position);
-          if(from.name!==source.name || to.name!==target.name) return fail(409,'值日表已更新，请刷新后重新选择');
+          if(!validPosition(groups,from.position) || (kind==='swap' && !validPosition(groups,to.position))){
+            return fail(409,'值日表已更新，请刷新后重新选择');
+          }
+          const source=descriptor(groups,from.position);
+          const target=kind==='swap'?descriptor(groups,to.position):null;
+          if(source.name!==from.name || (target && target.name!==to.name)) return fail(409,'值日表已更新，请刷新后重新选择');
+          if(target && source.position[0]===target.position[0]) return fail(400,'请从不同组选择要交换的同学');
+          if(!target && (source.members.length!==2 || !Array.isArray(from.members) ||
+             !unchanged(groups,[{position:from.position,members:from.members}]))){
+            return fail(409,'请选择成员未变化的双人组');
+          }
           const pending=requests.filter(item=>item.status==='pending');
           if(pending.length>=100 || pending.filter(item=>item.owner===owner).length>=4) return fail(429,'待审批申请过多，请等处理后再提交');
-          if(pending.some(item=>[item.from.name,item.to.name].includes(source.name) &&
-            [item.from.name,item.to.name].includes(target.name))) return fail(409,'这两位同学之间已有待审批的申请');
-          const item={id:randomUUID(),owner,from:source,to:target,reason:reason.trim(),status:'pending',date:new Date().toISOString()};
+          const duplicate=target
+            ? pending.some(item=>item.to && [item.from.name,item.to.name].includes(source.name) && [item.from.name,item.to.name].includes(target.name))
+            : pending.some(item=>item.kind==='split' && item.from.position[0]===source.position[0] && unchanged(groups,[item.from]));
+          if(duplicate) return fail(409,'已有相同的待审批申请');
+          const item={id:randomUUID(),owner,kind,from:source,to:target,reason:reason.trim(),status:'pending',date:new Date().toISOString()};
           requests.unshift(item);
           return ok(publicRequest(item),201);
+        });
+      }
+    }else if(admin && path===base+'/people' && req.method==='POST'){
+      const {name,partner=null}=await readJson(req);
+      const normalized=typeof name==='string'?name.trim():'';
+      if(!normalized || normalized.length>30 || /[\u0000-\u001f\u007f]/.test(normalized)){
+        result=fail(400,'请输入 1–30 字的有效姓名');
+      }else{
+        result=await change(db,({groups})=>{
+          if(groups.some(group=>group.includes(normalized))) return fail(409,'这个姓名已在值日表里');
+          if(partner===null){
+            groups.push([normalized]);
+          }else{
+            if(!validPosition(groups,partner?.position)) return fail(409,'搭档的位置已变动，请刷新后重新选择');
+            const group=groups[partner.position[0]];
+            if(group.length!==1 || group[0]!==partner.name) return fail(409,'该同学已不在原单人组，请刷新后重新选择');
+            group.push(normalized);
+          }
+          return ok({groups},201);
         });
       }
     }else if(admin && req.method==='PUT' && /^\/api\/admin\/duty\/[a-f0-9-]{36}$/.test(path)){
@@ -76,9 +109,17 @@ export function dutyRoutes(db, readJson, admin=false) {
           const item=state.requests.find(request=>request.id===id);
           if(!item || item.status!=='pending') return fail(409,'申请已处理，请刷新');
           if(status==='approved'){
-            if(!unchanged(state.groups,[item.from,item.to])) return fail(409,'相关值日组已调整，不能按原申请交换。可以驳回并请同学重新申请');
-            const [a,b]=item.from.position, [c,d]=item.to.position;
-            [state.groups[a][b],state.groups[c][d]]=[state.groups[c][d],state.groups[a][b]];
+            const sides=item.kind==='split'?[item.from]:[item.from,item.to];
+            if(!unchanged(state.groups,sides)) return fail(409,'相关值日组已调整，可以驳回并请同学重新申请');
+            const [a,b]=item.from.position;
+            if(item.kind==='split'){
+              const [first,second]=state.groups[a];
+              state.groups[a]=[first];
+              state.groups.push([second]);
+            }else{
+              const [c,d]=item.to.position;
+              [state.groups[a][b],state.groups[c][d]]=[state.groups[c][d],state.groups[a][b]];
+            }
           }
           item.status=status;
           item.note=note.trim();

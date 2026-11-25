@@ -98,6 +98,30 @@ for(const backend of ['SQLite','PostgreSQL']){
       assert.deepEqual(added.data.groups.at(-1),['新同学一']);
       assert.equal((await admin(people,'POST',{name:'新同学三',partner:{position:[8,0],name:pair[0]}})).status,409);
       assert.deepEqual((await other('/duty')).data.groups,added.data.groups);
+
+      const pairBeforeRemoval=added.data.groups[8];
+      const pending=await applicant(route,'POST',{
+        kind:'split',from:{position:[8,1],name:'新同学二',members:pairBeforeRemoval},reason:'希望改为单人值日'
+      });
+      assert.equal(pending.status,201);
+      const removePairMember={position:[8,1],name:'新同学二',members:pairBeforeRemoval};
+      assert.equal((await applicant(people,'DELETE',removePairMember)).status,401);
+      assert.equal((await admin(people,'DELETE',{...removePairMember,members:['过期','新同学二']})).status,409);
+      const removed=await admin(people,'DELETE',removePairMember);
+      assert.deepEqual(removed,{status:200,data:{removed:'新同学二',affected:1}});
+      const remaining=(await applicant('/duty')).data;
+      assert.deepEqual(remaining.groups[8],[pairBeforeRemoval[0]]);
+      assert.equal(remaining.groups.flat().includes('新同学二'),false);
+      const returned=remaining.requests.find(item=>item.id===pending.data.id);
+      assert.equal(returned.status,'rejected');
+      assert.match(returned.note,/重新申请/);
+      assert.equal((await admin('/admin/duty/'+pending.data.id,'PUT',approval)).status,409);
+
+      const last=remaining.groups.length-1;
+      assert.equal((await admin(people,'DELETE',{position:[last,0],name:'新同学一',members:['新同学一']})).status,200);
+      const final=(await other('/duty')).data.groups;
+      assert.deepEqual(final[last],[]);
+      assert.deepEqual(final[8],[pairBeforeRemoval[0]]);
     }finally{
       server?.closeAllConnections();
       if(server)await new Promise(resolve=>server.close(resolve));

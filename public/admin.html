@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>管理后台 · 25计算机1</title><link rel="stylesheet" href="/style.css?v=4.3.5"><link rel="stylesheet" href="/board.css?v=4.3.5"><link rel="stylesheet" href="/campus.css?v=4.3.5"><link rel="stylesheet" href="/club.css?v=5.0.0"><link rel="stylesheet" href="/duty.css?v=1"></head><body class="admin-page club-admin"><header><a class="logo" href="/"><span class="logo-icon">&lt;/&gt;</span>25计算机1</a><nav><a href="/">返回班级首页 ↗</a></nav></header><main class="section admin-main"><div class="club-kicker"><span></span> 25计算机1</div><h1>班级工作台</h1><p class="small-note" id="admin-status" role="status">正在检查登录状态…</p><form id="admin-login" class="admin-login" hidden><h2>欢迎回来</h2><p class="small-note">请输入独立管理员密码，管理属于我们的班级空间。</p><label for="admin-password">管理员密码</label><input id="admin-password" type="password" autocomplete="current-password" required maxlength="128"><button class="button">登录管理后台 ↗</button></form><div id="admin-panel" hidden>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>管理后台 · 25计算机1</title><link rel="stylesheet" href="/style.css?v=4.3.5"><link rel="stylesheet" href="/board.css?v=4.3.5"><link rel="stylesheet" href="/campus.css?v=4.3.5"><link rel="stylesheet" href="/club.css?v=5.0.0"><link rel="stylesheet" href="/duty.css?v=2"></head><body class="admin-page club-admin"><header><a class="logo" href="/"><span class="logo-icon">&lt;/&gt;</span>25计算机1</a><nav><a href="/">返回班级首页 ↗</a></nav></header><main class="section admin-main"><div class="club-kicker"><span></span> 25计算机1</div><h1>班级工作台</h1><p class="small-note" id="admin-status" role="status">正在检查登录状态…</p><form id="admin-login" class="admin-login" hidden><h2>欢迎回来</h2><p class="small-note">请输入独立管理员密码，管理属于我们的班级空间。</p><label for="admin-password">管理员密码</label><input id="admin-password" type="password" autocomplete="current-password" required maxlength="128"><button class="button">登录管理后台 ↗</button></form><div id="admin-panel" hidden>
   <div class="work-toolbar">
     <span>同学端内容管理</span>
     <div class="work-actions">
@@ -106,6 +106,16 @@
     </fieldset>
    </form>
   </details>
+  <details>
+   <summary>移出同学</summary>
+   <form id="duty-remove-form">
+    <fieldset id="duty-remove-fields" disabled>
+     <label for="duty-remove-member">从正式值日表移出的同学</label>
+     <select id="duty-remove-member" required><option value="">请选择姓名</option></select>
+     <div class="duty-actions"><button class="club-quiet" type="submit">移出值日表</button></div>
+    </fieldset>
+   </form>
+  </details>
   <h3>待审批</h3><div id="duty-admin-list"></div>
   <details><summary>审批记录</summary><div id="duty-admin-history"></div></details>
  </div>
@@ -132,4 +142,4 @@
 .mascot-admin-card-action { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
 .mascot-admin-card input { margin: 0; padding: 8px 10px; font-size: 13px; font-family: monospace; }
 </style>
-</div></main><script src="/social-client.js"></script><script src="/social-admin.js"></script><script src="/board-admin.js?v=4.0"></script><script src="/arcade-admin.js?v=4.5.1"></script><script src="/admin-client.js?v=5.0.0"></script><script src="/campus-admin.js?v=4.3.5"></script><script src="/club-admin.js?v=5.0.0"></script><script src="/duty-client.js?v=2"></script></body></html>
+</div></main><script src="/social-client.js"></script><script src="/social-admin.js"></script><script src="/board-admin.js?v=4.0"></script><script src="/arcade-admin.js?v=4.5.1"></script><script src="/admin-client.js?v=5.0.0"></script><script src="/campus-admin.js?v=4.3.5"></script><script src="/club-admin.js?v=5.0.0"></script><script src="/duty-client.js?v=3"></script></body></html>

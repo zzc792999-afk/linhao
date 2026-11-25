@@ -1,5 +1,4 @@
 .duty-site { padding-bottom: 24px; }
-.duty-home-link { margin-inline-start: auto; }
 .duty-shell { width: min(1100px, calc(100% - 28px)); margin: 20px auto 44px; }
 .duty-hero {
   display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap;

@@ -25,6 +25,12 @@ const descriptor = (groups,position) => {
 const fail = (status,error) => ({status,data:{error}});
 const ok = (data,status=200) => ({status,data});
 
+function trimHistory(state){
+  const history=state.requests.filter(request=>request.status!=='pending')
+    .sort((a,b)=>b.reviewedAt.localeCompare(a.reviewedAt)).slice(0,200);
+  state.requests=state.requests.filter(request=>request.status==='pending').concat(history);
+}
+
 async function readState(db) {
   const raw = await db.setting(key,null);
   const state = raw===null ? {groups:initialGroups.map(group=>[...group]),requests:[]} : JSON.parse(raw);
@@ -99,6 +105,31 @@ export function dutyRoutes(db, readJson, admin=false) {
           return ok({groups},201);
         });
       }
+    }else if(admin && path===base+'/people' && req.method==='DELETE'){
+      const {position,name,members}=await readJson(req);
+      if(typeof name!=='string' || !Array.isArray(members)){
+        result=fail(400,'请选择要移出的同学');
+      }else{
+        result=await change(db,state=>{
+          if(!validPosition(state.groups,position) || state.groups[position[0]][position[1]]!==name ||
+             !unchanged(state.groups,[{position,members}])){
+            return fail(409,'值日组已变动，请刷新后重新选择');
+          }
+          const [group,slot]=position;
+          // Keep group indices stable for earlier requests, including emptied single-person groups.
+          state.groups[group].splice(slot,1);
+          const affected=state.requests.filter(item=>item.status==='pending' &&
+            (item.from.position[0]===group || item.to?.position[0]===group));
+          const now=new Date().toISOString();
+          for(const item of affected){
+            item.status='rejected';
+            item.note='原值日组有同学移出，请按最新值日表重新申请。';
+            item.reviewedAt=now;
+          }
+          if(affected.length) trimHistory(state);
+          return ok({removed:name,affected:affected.length});
+        });
+      }
     }else if(admin && req.method==='PUT' && /^\/api\/admin\/duty\/[a-f0-9-]{36}$/.test(path)){
       const id=path.slice(base.length+1);
       const {status,note}=await readJson(req);
@@ -124,8 +155,7 @@ export function dutyRoutes(db, readJson, admin=false) {
           item.status=status;
           item.note=note.trim();
           item.reviewedAt=new Date().toISOString();
-          const history=state.requests.filter(request=>request.status!=='pending').sort((a,b)=>b.reviewedAt.localeCompare(a.reviewedAt)).slice(0,200);
-          state.requests=state.requests.filter(request=>request.status==='pending').concat(history);
+          trimHistory(state);
           return ok(publicRequest(item));
         });
       }

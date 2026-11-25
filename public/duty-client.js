@@ -143,6 +143,7 @@
     const list=$('duty-admin-list'), history=$('duty-admin-history'), notice=$('duty-admin-status');
     const reload=$('duty-admin-refresh');
     const add=$('duty-add-form'), addFields=$('duty-add-fields'), partner=$('duty-add-partner');
+    const remove=$('duty-remove-form'), removeFields=$('duty-remove-fields'), member=$('duty-remove-member');
     let busy=false, groups;
     function drawPartners(){
       const old=partner.value, oldText=partner.selectedOptions[0]?.textContent;
@@ -156,6 +157,18 @@
         partner.append(option);
       });
       if([...partner.options].some(option=>option.value===old && option.textContent===oldText))partner.value=old;
+    }
+    function drawMembers(){
+      const old=member.value, oldText=member.selectedOptions[0]?.textContent;
+      const placeholder=node('option','请选择姓名');
+      placeholder.value='';
+      member.replaceChildren(placeholder);
+      groups.forEach((group,index)=>group.forEach((name,slot)=>{
+        const option=node('option',name+' · '+title(groups,[index]));
+        option.value=[index,slot].join(',');
+        member.append(option);
+      }));
+      if([...member.options].some(option=>option.value===old && option.textContent===oldText))member.value=old;
     }
     function reviewCard(item){
       const row=card(item);
@@ -186,18 +199,19 @@
     }
     async function load(keepNotice=false){
       if(busy)return;
-      busy=true;reload.disabled=true;addFields.disabled=true;
+      busy=true;reload.disabled=true;addFields.disabled=true;removeFields.disabled=true;
       try{
         const data=await request('/api/admin/duty');
         groups=data.groups;
         drawPartners();
+        drawMembers();
         const pending=data.requests.filter(item=>item.status==='pending');
         const done=data.requests.filter(item=>item.status!=='pending');
         list.replaceChildren(...(pending.length?pending.map(reviewCard):[node('p','目前没有待审批申请。','duty-help')]));
         history.replaceChildren(...(done.length?done.map(card):[node('p','暂无审批记录。','duty-help')]));
         if(!keepNotice)notice.textContent='';
       }catch(error){notice.textContent=error.message}
-      finally{busy=false;reload.disabled=false;addFields.disabled=!groups}
+      finally{busy=false;reload.disabled=false;addFields.disabled=!groups;removeFields.disabled=!groups}
     }
     add.addEventListener('submit',async event=>{
       event.preventDefault();
@@ -212,15 +226,37 @@
         groups=data.groups;
         add.reset();
         drawPartners();
+        drawMembers();
         notice.textContent='已将 '+name+' 加入正式值日表。';
       }catch(error){notice.textContent=error.message}
       finally{busy=false;addFields.disabled=!groups}
+    });
+    remove.addEventListener('submit',async event=>{
+      event.preventDefault();
+      if(busy || !groups || !member.value)return;
+      const position=member.value.split(',').map(Number);
+      const [index,slot]=position;
+      const members=groups[index], name=members[slot], partnerName=members[1-slot];
+      const confirmation='确认把 '+name+' 移出正式值日表？'+
+        (partnerName?'\n'+partnerName+' 将改为单人值日。':'');
+      if(!confirm(confirmation))return;
+      busy=true;removeFields.disabled=true;
+      try{
+        const data=await request('/api/admin/duty/people','DELETE',{position,name,members});
+        remove.reset();
+        notice.textContent='已将 '+data.removed+' 移出正式值日表。'+
+          (data.affected?' '+data.affected+' 条相关待审批申请已退回。':'');
+        busy=false;
+        await load(true);
+      }catch(error){notice.textContent=error.message}
+      finally{busy=false;removeFields.disabled=!groups}
     });
     reload.addEventListener('click',()=>load());
     admin.addEventListener('toggle',()=>{if(admin.open)load()});
     window.addEventListener('class-admin-ready',()=>{if(admin.open)load()});
     window.addEventListener('class-admin-logout',()=>{
-      groups=undefined;add.reset();addFields.disabled=true;list.replaceChildren();history.replaceChildren();notice.textContent='';
+      groups=undefined;add.reset();remove.reset();addFields.disabled=true;removeFields.disabled=true;
+      list.replaceChildren();history.replaceChildren();notice.textContent='';
     });
   }
 })();

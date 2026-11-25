@@ -35,6 +35,12 @@ export function activityStore(query){
   ...memeStore(query),
   ...weeklyStore(query),
   setting,saveSetting,
+  async compareSetting(key,previous,value){
+   const result=previous===null
+    ? await query('INSERT INTO class_settings(key,value) VALUES($1,$2) ON CONFLICT(key) DO NOTHING',[key,value])
+    : await query('UPDATE class_settings SET value=$3 WHERE key=$1 AND value=$2',[key,previous,value]);
+   return result.rowCount===1;
+  },
   async fun(owner,day){
    const [polls,votes,mine,checkins,announcement,roster]=await Promise.all([
     rows('SELECT id,title,options,is_open,date FROM polls WHERE deleted=0 ORDER BY date DESC,id DESC'),

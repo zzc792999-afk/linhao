@@ -5,6 +5,7 @@ import {boardInput} from './board.js';
 import {arcadeAdminRoutes} from './arcade.js';
 import {campusAdminRoutes} from './campus.js';
 import {weeklyAdminRoutes} from './weekly.js';
+import {dutyRoutes} from './duty.js';
 
 const scrypt=promisify(rawScrypt);
 const hash=s=>createHash('sha256').update(s).digest('hex');
@@ -19,6 +20,7 @@ export function adminRoutes(db,readJson){
  const arcadeAdmin=arcadeAdminRoutes(db);
  const campusAdmin=campusAdminRoutes(db,readJson);
  const weeklyAdmin=weeklyAdminRoutes(db,readJson);
+ const dutyAdmin=dutyRoutes(db,readJson,true);
  const attempts=new Map();let globalAttempts={start:Date.now(),count:0};
  const cookie=(res,value,maxAge)=>res.appendHeader('Set-Cookie',`class_admin=${value}; Path=/api/admin; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${process.env.NODE_ENV==='production'?'; Secure':''}`);
 
@@ -45,6 +47,7 @@ export function adminRoutes(db,readJson){
   if(await campusAdmin(req,res,url,owner,send))return true;
   const audit=async(action,target='')=>db.audit(randomBytes(16).toString('hex'),action,target,new Date().toISOString());
   if(await weeklyAdmin(req,res,url,send,audit))return true;
+  if(await dutyAdmin(req,res,url,owner,send))return true;
   if(url.pathname==='/api/admin/board'&&req.method==='GET'){send(200,{items:await db.board(owner,true)});return true}
   const boardTarget=/^\/api\/admin\/board\/([a-f0-9]{32})$/.exec(url.pathname);
   if(url.pathname==='/api/admin/board'&&req.method==='POST'){

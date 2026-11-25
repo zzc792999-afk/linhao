@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+ <title>教室值日安排 · 25计算机1</title>
+ <link rel="stylesheet" href="/style.css?v=4.5.4">
+ <link rel="stylesheet" href="/club.css?v=5.0.0">
+ <link rel="stylesheet" href="/duty.css?v=1">
+ <script defer src="/duty-client.js?v=1"></script>
+</head>
+<body class="club-site duty-site">
+ <header class="club-header"><div class="club-header-inner"><a class="logo" href="/"><span class="logo-icon" aria-hidden="true">&lt;/&gt;</span>25计算机1</a><a class="club-quiet duty-home-link" href="/">返回班级首页</a></div></header>
+ <main class="duty-shell" id="duty-page">
+  <div class="duty-hero">
+   <div><p>25计算机1 · 班务</p><h1>教室值日安排</h1><p>查看正式名单，和同学商量好后可以申请交换值日位置。</p></div>
+   <a class="club-primary" href="#duty-apply">申请调换 ↓</a>
+  </div>
+  <p id="duty-load-status" class="duty-status" role="status">正在加载值日表…</p>
+  <button id="duty-retry" class="club-quiet" type="button" hidden>重新加载</button>
+  <div class="duty-layout">
+   <section class="duty-section" aria-labelledby="duty-list-title">
+    <h2 id="duty-list-title">正式值日表</h2>
+    <div class="duty-tables">
+     <div><h3>单人值日</h3><ol id="duty-solo" class="duty-list"></ol></div>
+     <div><h3>双人值日</h3><ol id="duty-pairs" class="duty-list"></ol></div>
+    </div>
+   </section>
+   <div class="duty-sidebar">
+    <section class="duty-section" id="duty-apply" aria-labelledby="duty-form-title">
+     <h2 id="duty-form-title">申请调换</h2>
+     <p class="duty-help">单人和双人组可以互换位置。双人组中另一位同学原地不动。</p>
+     <form id="duty-form">
+      <fieldset id="duty-fields" disabled>
+       <label for="duty-from">我的值日位置</label><select id="duty-from" required></select>
+       <label for="duty-to">想交换的同学位置</label><select id="duty-to" required></select>
+       <p class="duty-help" id="duty-preview" hidden></p>
+       <label for="duty-reason">申请理由</label><textarea id="duty-reason" rows="3" minlength="2" maxlength="200" required placeholder="简要说明原因和协商情况"></textarea>
+       <button type="submit" class="club-primary">提交调换申请</button>
+      </fieldset>
+     </form>
+     <p class="duty-help">管理员同意后，正式值日表才会更新。</p>
+     <p class="duty-status" id="duty-form-status" role="status"></p>
+    </section>
+    <section class="duty-section" aria-labelledby="duty-mine-title">
+     <div class="duty-section-head"><h2 id="duty-mine-title">我的申请</h2><button type="button" id="duty-refresh" class="club-quiet">刷新状态</button></div>
+     <div id="duty-mine"></div>
+    </section>
+   </div>
+  </div>
+ </main>
+</body>
+</html>

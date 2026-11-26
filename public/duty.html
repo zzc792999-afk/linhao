@@ -7,7 +7,7 @@
  <link rel="stylesheet" href="/style.css?v=4.5.4">
  <link rel="stylesheet" href="/club.css?v=5.0.0">
  <link rel="stylesheet" href="/duty.css?v=2">
- <script defer src="/duty-client.js?v=3"></script>
+ <script defer src="/duty-client.js?v=4"></script>
 </head>
 <body class="club-site duty-site">
  <header class="club-header"><div class="club-header-inner"><span class="logo"><span class="logo-icon" aria-hidden="true">&lt;/&gt;</span>25计算机1</span></div></header>
@@ -29,11 +29,11 @@
    <div class="duty-sidebar">
     <section class="duty-section" id="duty-apply" aria-labelledby="duty-form-title">
      <h2 id="duty-form-title">申请调换</h2>
-     <p class="duty-help">可以和其他同学换位，也可以申请把当前双人组拆成两个单人组。</p>
+     <p class="duty-help">可以交换值日位置、把两名单人值日的同学合为一组，或将双人组拆开。</p>
      <form id="duty-form">
       <fieldset id="duty-fields" disabled>
        <label for="duty-kind">申请类型</label>
-       <select id="duty-kind"><option value="swap">交换值日位置</option><option value="split">双人组拆成两个单人组</option></select>
+       <select id="duty-kind"><option value="swap">交换值日位置</option><option value="merge">两个单人组合成一个双人组</option><option value="split">双人组拆成两个单人组</option></select>
        <label for="duty-from">我的值日位置</label><select id="duty-from" required></select>
        <div id="duty-target"><label for="duty-to">想交换的同学位置</label><select id="duty-to" required></select></div>
        <p class="duty-help" id="duty-preview" hidden></p>

@@ -20,7 +20,7 @@
   }
   const side = ({name,label,position:[index]}) =>
     name+'（'+(label || (index<8?'单人第 '+(index+1)+' 组':'双人第 '+(index-7)+' 组'))+'）';
-  const actionText = item => item.kind==='split' ? item.from.members.join('、')+' → 分为两个单人组' : side(item.from)+' ⇄ '+side(item.to);
+  const actionText = item => item.kind==='merge' ? item.from.name+' 和 '+item.to.name+' → 合为一个双人组' : item.kind==='split' ? item.from.members.join('、')+' → 分为两个单人组' : side(item.from)+' ⇄ '+side(item.to);
   async function request(path,method='GET',body) {
     const response=await fetch(path,{method,credentials:'same-origin',signal:AbortSignal.timeout(18000),
       ...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});
@@ -49,7 +49,7 @@
       const members=state.groups[position[0]];
       return {position,name:members[position[1]],members};
     }
-    function options(select,{exclude,pairsOnly=false}={}){
+    function options(select,{exclude,size}={}){
       const old=select.value;
       const oldText=select.selectedOptions[0]?.textContent;
       const placeholder=node('option','请选择姓名');
@@ -58,7 +58,7 @@
       const solo=node('optgroup'), pairs=node('optgroup');
       solo.label='单人值日'; pairs.label='双人值日';
       state.groups.forEach((group,i)=>{
-        if(i===exclude || (pairsOnly && group.length!==2))return;
+        if(i===exclude || (size && group.length!==size))return;
         group.forEach((name,j)=>{
           const option=node('option',name+' · '+title(state.groups,[i]));
           option.value=[i,j].join(',');
@@ -76,6 +76,10 @@
         return;
       }
       hint.hidden=!(first&&second);
+      if(first&&second && kind.value==='merge'){
+        hint.textContent=first.name+'和'+second.name+'将在审批通过后一起双人值日。';
+        return;
+      }
       if(first&&second){
         const describe=(student,target)=>{
           const partner=state.groups[target.position[0]][1-target.position[1]];
@@ -86,10 +90,12 @@
     }
     function drawChoices(){
       const splitting=kind.value==='split';
-      options(from,{pairsOnly:splitting});
+      const merging=kind.value==='merge';
+      options(from,{size:splitting?2:merging?1:undefined});
+      target.querySelector('label').textContent=merging?'想一起值日的同学':'想交换的同学位置';
       target.hidden=splitting;
       to.disabled=splitting;
-      options(to,{exclude:member(from)?.position[0]});
+      options(to,{exclude:member(from)?.position[0],size:merging?1:undefined});
       preview();
     }
     function draw(){
@@ -118,7 +124,7 @@
       }
     }
     kind.addEventListener('change',drawChoices);
-    from.addEventListener('change',()=>{options(to,{exclude:member(from)?.position[0]});preview()});
+    from.addEventListener('change',drawChoices);
     to.addEventListener('change',preview);
     retry.addEventListener('click',load);
     refresh.addEventListener('click',load);

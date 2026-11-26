@@ -120,6 +120,23 @@ for(const backend of ['SQLite','PostgreSQL']){
       const last=remaining.groups.length-1;
       assert.equal((await admin(people,'DELETE',{position:[last,0],name:'新同学一',members:['新同学一']})).status,200);
       const final=(await other('/duty')).data.groups;
+      const solos=final.map((members,i)=>({members,position:[i,0],name:members[0]})).filter(s=>s.members.length===1);
+      const [fromSolo,toSolo,third]=solos;
+      const merge={kind:'merge',from:fromSolo,to:toSolo,reason:'希望搭档值日'};
+      assert.equal((await applicant(route,'POST',{...merge,to:fromSolo})).status,400);
+      const groupIndex=final.findIndex(g=>g.length===2);
+      assert.equal((await applicant(route,'POST',{...merge,to:{position:[groupIndex,0],name:final[groupIndex][0]}})).status,409);
+      const proposed=await applicant(route,'POST',merge);
+      assert.equal(proposed.status,201);
+      assert.equal((await other(route,'POST',{...merge,from:toSolo,to:fromSolo})).status,409);
+      const conflict=await other(route,'POST',{...merge,to:third});
+      assert.deepEqual((await other('/duty')).data.groups,final);
+      assert.equal((await admin('/admin/duty/'+proposed.data.id,'PUT',approval)).status,200);
+      const merged=(await other('/duty')).data.groups;
+      assert.deepEqual(merged[fromSolo.position[0]],[fromSolo.name,toSolo.name]);
+      assert.deepEqual(merged[toSolo.position[0]],[]);
+      assert.deepEqual(merged.flat().sort(),final.flat().sort());
+      assert.equal((await admin('/admin/duty/'+conflict.data.id,'PUT',approval)).status,409);
       assert.deepEqual(final[last],[]);
       assert.deepEqual(final[8],[pairBeforeRemoval[0]]);
     }finally{

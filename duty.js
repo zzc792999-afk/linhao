@@ -59,18 +59,21 @@ export function dutyRoutes(db, readJson, admin=false) {
       result=ok({groups,requests:visible.map(publicRequest)});
     }else if(!admin && path===base+'/requests' && req.method==='POST'){
       const {kind='swap',from,to,reason}=await readJson(req);
-      if(!['swap','split'].includes(kind) || typeof reason!=='string' || reason.trim().length<2 || reason.trim().length>200 ||
-         typeof from?.name!=='string' || (kind==='swap' && typeof to?.name!=='string')){
+      if(!['swap','split','merge'].includes(kind) || typeof reason!=='string' || reason.trim().length<2 || reason.trim().length>200 ||
+         typeof from?.name!=='string' || (kind!=='split' && typeof to?.name!=='string')){
         result=fail(400,'请选择申请类型和值日位置，并填写 2–200 字申请理由');
       }else{
         result=await change(db,({groups,requests})=>{
-          if(!validPosition(groups,from.position) || (kind==='swap' && !validPosition(groups,to.position))){
+          if(!validPosition(groups,from.position) || (kind!=='split' && !validPosition(groups,to.position))){
             return fail(409,'值日表已更新，请刷新后重新选择');
           }
           const source=descriptor(groups,from.position);
-          const target=kind==='swap'?descriptor(groups,to.position):null;
+          const target=kind!=='split'?descriptor(groups,to.position):null;
           if(source.name!==from.name || (target && target.name!==to.name)) return fail(409,'值日表已更新，请刷新后重新选择');
-          if(target && source.position[0]===target.position[0]) return fail(400,'请从不同组选择要交换的同学');
+          if(target && source.position[0]===target.position[0]) return fail(400,'请选择两个不同值日组的同学');
+          if(kind==='merge' && (source.members.length!==1 || target.members.length!==1)){
+            return fail(409,'合组需要两位当前单人值日的同学，请刷新后重新选择');
+          }
           if(!target && (source.members.length!==2 || !Array.isArray(from.members) ||
              !unchanged(groups,[{position:from.position,members:from.members}]))){
             return fail(409,'请选择成员未变化的双人组');
@@ -78,7 +81,7 @@ export function dutyRoutes(db, readJson, admin=false) {
           const pending=requests.filter(item=>item.status==='pending');
           if(pending.length>=100 || pending.filter(item=>item.owner===owner).length>=4) return fail(429,'待审批申请过多，请等处理后再提交');
           const duplicate=target
-            ? pending.some(item=>item.to && [item.from.name,item.to.name].includes(source.name) && [item.from.name,item.to.name].includes(target.name))
+            ? pending.some(item=>(item.kind||'swap')===kind && item.to && [item.from.name,item.to.name].includes(source.name) && [item.from.name,item.to.name].includes(target.name))
             : pending.some(item=>item.kind==='split' && item.from.position[0]===source.position[0] && unchanged(groups,[item.from]));
           if(duplicate) return fail(409,'已有相同的待审批申请');
           const item={id:randomUUID(),owner,kind,from:source,to:target,reason:reason.trim(),status:'pending',date:new Date().toISOString()};
@@ -147,6 +150,10 @@ export function dutyRoutes(db, readJson, admin=false) {
               const [first,second]=state.groups[a];
               state.groups[a]=[first];
               state.groups.push([second]);
+            }else if(item.kind==='merge'){
+              const c=item.to.position[0];
+              state.groups[a].push(state.groups[c][0]);
+              state.groups[c]=[];
             }else{
               const [c,d]=item.to.position;
               [state.groups[a][b],state.groups[c][d]]=[state.groups[c][d],state.groups[a][b]];

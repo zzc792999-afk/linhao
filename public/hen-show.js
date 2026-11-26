@@ -139,3 +139,55 @@
   document.addEventListener('visibilitychange', schedule);
   draw();
 })();
+
+(() => {
+  const root=document.getElementById('night-patrol');
+  if(!root)return;
+  const board=document.getElementById('patrol-board');
+  const status=document.getElementById('patrol-status');
+  const refresh=document.getElementById('patrol-refresh');
+  const node=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n};
+  const avatar=id=>{const img=document.createElement('img');img.alt='';img.width=56;img.height=50;img.src='/assets/mascots-v1/'+(id==='liubang'?'liubang-1':id)+'.svg';return img};
+  let busy=false;
+  function render(data){
+    board.replaceChildren();
+    status.textContent=data.open?'夜巡灯已亮 · 本轮于北京时间 06:00 揭晓':'北京时间 18:00 点灯投票，次日 06:00 揭晓';
+    board.append(node('h5',data.icon+' '+data.title),node('p',data.intro));
+    if(data.lead)board.append(node('p',data.lead));
+    const choices=node('div','');choices.className='patrol-choices';
+    for(const candidate of data.candidates){
+      const button=node('button','');button.type='button';button.disabled=!data.open;
+      button.setAttribute('aria-pressed',String(candidate.mine));
+      button.append(avatar(candidate.id),node('strong',candidate.name),node('small',(candidate.mine?'已选 · ':'')+candidate.votes+' 票'));
+      button.onclick=()=>load({day:data.day,mascot:candidate.id});
+      choices.append(button);
+    }
+    board.append(choices,node('small','每台浏览器每轮一票，收队前可改选。平票由候选顺序靠前者出发。'));
+    const result=data.previous;
+    if(!result){board.append(node('p','上一轮没有派出队员，值夜本暂时空着。'));return}
+    const report=node('section','');
+    report.append(node('h5','昨夜案情 · '+result.title),node('p',result.name+' 获得 '+result.votes+' 票，带回了这份调查记录。'));
+    const panels=node('div','');panels.className='patrol-panels';
+    result.panels.forEach(([place,prop,line],index)=>{
+      const panel=node('figure','');const scene=node('div',prop);scene.className='patrol-scene';
+      scene.prepend(avatar(index===2?'chicken':result.id));
+      panel.append(scene,node('strong',place),node('figcaption',line));panels.append(panel);
+    });
+    report.append(panels);board.append(report);
+  }
+  async function load(vote){
+    if(busy)return;
+    busy=true;refresh.disabled=true;board.inert=true;
+    try{
+      const r=await fetch('/api/arcade/patrol',{method:vote?'PUT':'GET',headers:vote?{'Content-Type':'application/json'}:{},body:vote?JSON.stringify(vote):undefined,signal:AbortSignal.timeout(20000)});
+      const data=await r.json();if(!r.ok)throw Error(data.error||'暂时无法读取值夜本。');
+      render(data);if(vote)status.textContent='选票已保存，本轮于北京时间 06:00 揭晓。';
+    }catch(e){status.textContent=e.message+' 点下方按钮可重新同步。'}
+    finally{busy=false;refresh.disabled=false;board.inert=false}
+  }
+  if(document.body.dataset.mode==='preview'){status.textContent='请在正式班级网站参加全班夜巡。';refresh.hidden=true;return}
+  refresh.onclick=()=>load();
+  const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))load()});
+  observer.observe(root);
+  setInterval(()=>{const box=root.getBoundingClientRect();if(!document.hidden&&box.top<innerHeight&&box.bottom>0)load()},60000);
+})();

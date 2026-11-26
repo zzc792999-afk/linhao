@@ -1,5 +1,6 @@
 import {randomBytes,randomInt,createHash} from 'node:crypto';
 import {validateStrokes} from './social.js';
+import {nightPatrol} from './night-patrol.js';
 import {mascots} from './arcade-database.js';
 const words=[['熊猫','动物'],['猫头鹰','动物'],['长颈鹿','动物'],['小白兔','动物'],['企鹅','动物'],['海豚','动物'],['蝴蝶','动物'],['蜗牛','动物'],['章鱼','动物'],['螃蟹','动物'],['刺猬','动物'],['河马','动物'],['西瓜','食物'],['草莓','食物'],['冰淇淋','食物'],['棒棒糖','食物'],['汉堡','食物'],['饺子','食物'],['香蕉','食物'],['菠萝','食物'],['披萨','食物'],['雨伞','物品'],['自行车','物品'],['眼镜','物品'],['书包','物品'],['键盘','物品'],['鼠标','物品'],['篮球','物品'],['吉他','物品'],['闹钟','物品'],['火箭','物品'],['风筝','物品'],['彩虹','自然'],['太阳','自然'],['月亮','自然'],['雪人','自然'],['向日葵','自然'],['仙人掌','自然'],['火山','自然'],['瀑布','自然']];
 const idOk=s=>typeof s==='string'&&/^[a-f0-9]{32}$/.test(s);
@@ -12,6 +13,11 @@ export function arcadeRoutes(db,readJson,{now=()=>Date.now()}={}){return async(r
  const timestamp=now(),day=dayAt(timestamp),date=new Date(timestamp).toISOString();
  const state=()=>db.arcadeState(owner,day);
  if(route==='/api/arcade'&&req.method==='GET'){send(200,await state());return true}
+ if(route==='/api/arcade/patrol'){
+  if(!['GET','PUT'].includes(req.method)){send(405,{error:'不支持的请求方式'});return true}
+  const body=req.method==='PUT'?await readJson(req):undefined;
+  send(...await nightPatrol(db,owner,timestamp,body));return true;
+ }
  if(route==='/api/arcade/chicks'){
   if(req.method==='GET'){
    send(200,await db.henFlock(day,owner));

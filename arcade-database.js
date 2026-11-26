@@ -284,6 +284,7 @@ export const mascots=[
 export const arcadeSchema=[
   'CREATE TABLE IF NOT EXISTS class_hen_hatches(day TEXT NOT NULL,owner TEXT NOT NULL,PRIMARY KEY(day,owner))',
   'CREATE TABLE IF NOT EXISTS class_arcade_profiles(owner TEXT PRIMARY KEY,name TEXT NOT NULL,mascot TEXT NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS class_patrol_votes(day TEXT NOT NULL,owner TEXT NOT NULL,mascot TEXT NOT NULL,level INTEGER NOT NULL,PRIMARY KEY(day,owner))',
   'CREATE TABLE IF NOT EXISTS class_arcade_feeds(day TEXT NOT NULL,owner TEXT NOT NULL,mascot TEXT NOT NULL,PRIMARY KEY(day,owner,mascot))',
   'CREATE INDEX IF NOT EXISTS class_arcade_feeds_mascot ON class_arcade_feeds(mascot)',
   'CREATE TABLE IF NOT EXISTS class_arcade_attempts(id TEXT PRIMARY KEY,owner TEXT NOT NULL,rounds TEXT NOT NULL,score INTEGER NOT NULL,day TEXT NOT NULL,date TEXT NOT NULL,revoked INTEGER NOT NULL DEFAULT 0)',
@@ -304,6 +305,8 @@ export function arcadeStore(query){
 
   return {
     arcadeProfile:profile,
+    patrolVote:(day,owner,mascot,level)=>query('INSERT INTO class_patrol_votes(day,owner,mascot,level) VALUES($1,$2,$3,$4) ON CONFLICT(day,owner) DO UPDATE SET mascot=excluded.mascot,level=excluded.level',[day,owner,mascot,level]),
+    patrolTotals:(day,owner)=>rows('SELECT mascot,COUNT(*) AS votes,MAX(level) AS level,MAX(CASE WHEN owner=$2 THEN 1 ELSE 0 END) AS mine FROM class_patrol_votes WHERE day=$1 GROUP BY mascot',[day,owner]),
     async arcadeCleanup(day,now){await query('DELETE FROM class_arcade_attempts WHERE day<$1 AND revoked=0',[day]);await query('DELETE FROM class_arcade_tickets WHERE expires_at<$1',[now])},
     arcadeSaveProfile:(owner,name,mascot)=>query('INSERT INTO class_arcade_profiles(owner,name,mascot) VALUES($1,$2,$3) ON CONFLICT(owner) DO UPDATE SET name=excluded.name,mascot=excluded.mascot',[owner,name,mascot]),
     arcadeFeed:(day,owner,mascot)=>query('INSERT INTO class_arcade_feeds(day,owner,mascot) VALUES($1,$2,$3) ON CONFLICT(day,owner,mascot) DO NOTHING',[day,owner,mascot]),

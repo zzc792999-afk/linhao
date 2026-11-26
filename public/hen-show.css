@@ -115,3 +115,17 @@
   .hen-show-stage[data-motion] .hen-show-extra,
   .hen-show-stage[data-motion] .hen-show-actors { animation: none; }
 }
+.night-patrol{padding:1.25rem;border:1px solid #a7b49c;border-radius:14px;background:#f5f4df;color:#253a34;scroll-margin-top:6rem}
+.night-patrol h4{margin:0;font-size:1.45rem}
+.night-patrol h5{font-size:1.05rem;margin:1rem 0 .4rem}
+.night-patrol p{margin:.45rem 0 .8rem}
+.patrol-choices,.patrol-panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem;margin:.8rem 0}
+.patrol-choices button{display:grid;justify-items:center;gap:.2rem;border:1px solid #a1ad99;border-radius:10px;background:#fffef5;color:inherit;padding:.5rem;cursor:pointer}
+.patrol-choices button:disabled{cursor:default}
+.patrol-choices button[aria-pressed=true]{border:2px solid #42694a;background:#dcebd0}
+.patrol-panels{grid-template-columns:repeat(2,minmax(0,1fr))}
+.patrol-panels figure{margin:0;background:#fffef5;border:1px solid #819382;padding:.65rem;border-radius:8px}
+.patrol-scene{display:flex;align-items:center;justify-content:space-evenly;background:#dedfc6;border-radius:5px;margin-bottom:.4rem;font-size:2rem}
+.patrol-panels figure:nth-child(even) .patrol-scene{background:#e3d7c2}
+.patrol-panels figcaption{font-size:.9rem;line-height:1.5}
+#patrol-refresh{margin-top:.7rem}

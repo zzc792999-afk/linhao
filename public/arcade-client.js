@@ -5,9 +5,14 @@
  const pets={pig:['🐷','猪','快乐加倍，烦恼减半。'],turtle:['🐢','甲鱼','不慌不忙，也在向前。'],chicken:['🐔','鸡','元气上线，开场就发光。'],cat:['🐈','野猫','自由探索，好奇不打烊。'],owl:['🦉','猫头鹰','灵感在线，陪你找到答案。'],dog:['🐶','狗','一路相伴，快乐有同伙。'],panda:['🐼','熊猫','今天也要，抱抱自己。'],rednose:['👦','小丑先生','鼻尖一点红，同窗一起笑。','/assets/rednose-classmate.svg'],hippo:['🦛','河马','大口吃水草，肚量容万物。'],horse:['🐎','马','一马当先，奔腾千里无拘束。'],donkeycat:['🫏','驴猫','驴耳配黑眼圈，呆萌又倔强。'],wuba:['🌱','胡巴','小萝卜吐水萌萌哒，妖界小至尊。'],triangle:['📐','三角形','三点成面最稳固，几何美学天花板。'],beetle:['🪲','屎壳郎','勤劳推球，默默蓄力不言弃。'],shoe:['👟','鞋子','步履不停，踏碎一切困难。'],oil:['🛢️','油','全员加满油，一路顺滑飙到底。'],liubang:['👑','刘邦','大风起兮云飞扬，五款王者神装随升级解锁！','/assets/liubang-1.jpg'],toe:['🦶','脚趾头','白白嫩嫩，迈出探索世界第一步。'],arowana:['🐠','龙鱼','灵动游弋，金鳞耀目。'],squirtle:['🐢','杰尼龟','圆圆脑袋，杰尼杰尼~'],buckteeth:['🦷','兔子牙','两颗大门牙，萌翻全场。'],wuliangye:['🏺','五粮液','红盖一拧，福气到班。'],penguin:['🐧','凑企鹅','扭着走，凑到你旁边。']};
  const mascotArtBase = '/assets/mascots-v1/';
  function mascotArt(id, skin){
-  if (id !== 'liubang') return mascotArtBase + id + '.svg';
-  const match = /^\/assets\/(?:mascots-v1\/)?liubang-([1-5])\.(?:jpg|svg)$/.exec(skin || '');
-  return mascotArtBase + 'liubang-' + (match?.[1] || '1') + '.svg';
+  const pet=state?.pets.find(entry=>entry.id===id);
+  let file=id;
+  if(id==='liubang'){
+   const match=/liubang-([1-5])\.(?:jpg|svg)$/.exec(skin || pet?.image || '');
+   file='liubang-'+(match?.[1] || '1');
+  }
+  const level=pet?.level || 1;
+  return mascotArtBase+file+'.svg'+(level>1?'?v=2#lv'+level:'');
  }
  function mascotIcon(id,emoji,customSrc){
   if (!Object.hasOwn(pets,id)) return el('span',emoji || '⚡','mascot-emoji-icon');
@@ -70,12 +75,14 @@
    const tag=homeCat.querySelector('.tag');if(tag)tag.textContent=active?'🐾 亲密 · 熊喵CP':'CLASS MASCOT / 04';
    const motto=homeCat.querySelector('p');if(motto)motto.textContent=active?'在熊猫软软的怀里打呼噜，喵星大魔王也投降 🐱❤️':'自由探索，好奇不打烊。';
   }
-  const homeLiubang=document.querySelector('.mascot-card[data-mascot-jump="liubang"] .mascot-avatar');
-  if(homeLiubang){
-   const skin=localStorage.getItem('class2501_liubang_skin')||'/assets/liubang-1.jpg';
-   let img=homeLiubang.querySelector('img');
-   if(!img){img=el('img',undefined,'mascot-custom-icon');img.width=96;img.height=96;homeLiubang.replaceChildren(img)}
-   img.src=mascotArt('liubang',skin);
+  for(const card of document.querySelectorAll('.mascot-card[data-mascot-jump]')){
+   const id=card.dataset.mascotJump;
+   const img=card.querySelector('.mascot-avatar img');
+   if(img && pets[id]){
+    const skin=id==='liubang'?localStorage.getItem('class2501_liubang_skin'):null;
+    const src=mascotArt(id,skin);
+    if(img.getAttribute('src')!==src)img.src=src;
+   }
   }
  }
  function triggerIntimateShower(){

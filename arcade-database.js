@@ -1,5 +1,7 @@
 const defaultProfile={name:'路过的同学',mascot:'panda'};
 
+const veteranRanks = ["领队", "王牌", "大师", "传奇"];
+
 export const mascots=[
   {
     id:'pig',baseName:'猪',name:'猪',emoji:'🐷',
@@ -332,11 +334,13 @@ export function arcadeStore(query){
         const rawFeeds=Number(totals.find(t=>t.mascot===m.id)?.n||0);
         const penalty=Math.max(0,Number(penalties[m.id]||0));
         const feeds=Math.max(0,rawFeeds-penalty);
-        const formIdx=Math.min(m.forms.length-1,Math.floor(feeds/10));
+        const maxLevel=m.forms.length+veteranRanks.length;
+        const level=Math.min(maxLevel,1+Math.floor(feeds/10));
+        const formIdx=Math.min(m.forms.length-1,level-1);
         const currentForm=m.forms[formIdx];
         const nextForm=m.forms[formIdx+1]||null;
-        const level=1+formIdx;
-        const isMaxLevel=formIdx>=m.forms.length-1;
+        const rank=veteranRanks[level-m.forms.length-1];
+        const isMaxLevel=level===maxLevel;
         const canAttack=level>=4;
         const todayAttacks=Number(todayAttacksMap[m.id]||0);
         const remainingAttacks=Math.max(0,3-todayAttacks);
@@ -347,7 +351,7 @@ export function arcadeStore(query){
         return {
           id:m.id,
           baseName:m.baseName,
-          name:currentForm.name,
+          name:rank ? m.baseName+"·"+rank : currentForm.name,
           emoji:currentForm.emoji,
           image:m.id==='liubang'
             ? (currentForm.image||m.image).replace('/assets/','/assets/mascots-v1/').replace('.jpg','.svg')
@@ -359,13 +363,14 @@ export function arcadeStore(query){
           level,
           isMaxLevel,
           canAttack,
-          maxLevel:m.forms.length,
+          maxLevel,
+          challengeModes:Math.max(0,level-m.forms.length),
           skill:m.attackSkill?{...m.attackSkill,baseDamage,levelBonus,damage}:null,
           progress:isMaxLevel?10:feeds%10,
           needed:10,
           fed:fed.some(f=>f.mascot===m.id),
           forms:m.forms,
-          nextForm:nextForm?nextForm.name:null,
+          nextForm:isMaxLevel ? null : nextForm?.name ?? m.baseName+"·"+veteranRanks[level-m.forms.length],
           todayAttacks,
           remainingAttacks,
           hitsReceived,

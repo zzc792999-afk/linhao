@@ -18,3 +18,12 @@
 /* Keep the red nose readable before the sticker has been collected. */
 .arcade-sticker:not(.owned) > img[src$="/rednose.svg"] { filter: none; opacity: .75; }
 .mascot-avatar > .mascot-custom-icon { width: 100%; height: 100%; }
+
+.mascot-challenge{width:min(26rem,90vw);box-sizing:border-box}
+.mascot-challenge[open]{display:grid;gap:.85rem}
+.mascot-challenge h3,.mascot-challenge p{margin:0}
+.mascot-challenge p{min-height:3em;line-height:1.6}
+.mascot-challenge select{font:inherit;padding:.5rem}
+.mascot-challenge>div{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.mascot-challenge>div button,.mascot-challenge>button:last-child{background:var(--paper);color:var(--ink)}
+.mascot-challenge button:disabled{opacity:.45}
